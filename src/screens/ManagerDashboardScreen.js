@@ -1,11 +1,18 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { EmptyState, Screen } from '../components/ui';
 
-// Placeholder: built in Question 10.
-export default function ManagerDashboardScreen({ route }) {
+// Placeholder: the full dashboard is built in Question 10.
+export default function ManagerDashboardScreen() {
+  const { user } = useAuth();
+  const { colors } = useTheme();
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Manager dashboard for {route.params?.user?.fullName}</Text>
-    </View>
+    <Screen style={{ justifyContent: 'center' }}>
+      <EmptyState emoji="👨‍🍳" title={`Welcome, ${user?.fullName ?? 'manager'}`}>
+        <Text style={{ color: colors.textMuted }}>Orders, reservations and menu tools arrive in Question 10.</Text>
+      </EmptyState>
+    </Screen>
   );
 }

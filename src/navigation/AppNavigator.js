@@ -1,20 +1,124 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useMemo } from 'react';
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { navigationRef } from './navigationRef';
+
 import LoginScreen from '../screens/LoginScreen';
 import MenuScreen from '../screens/MenuScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import ManagerDashboardScreen from '../screens/ManagerDashboardScreen';
 
-const Stack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+const MenuStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
+const DashboardStack = createNativeStackNavigator();
+
+// Header colours for every nested stack come from the theme.
+function useStackOptions() {
+  const { colors } = useTheme();
+  return useMemo(
+    () => ({
+      headerStyle: { backgroundColor: colors.surface },
+      headerTintColor: colors.text,
+      headerTitleStyle: { fontWeight: '800' },
+      contentStyle: { backgroundColor: colors.background },
+    }),
+    [colors]
+  );
+}
+
+function MenuStackScreen() {
+  const options = useStackOptions();
+  return (
+    <MenuStack.Navigator screenOptions={options}>
+      <MenuStack.Screen name="Menu" component={MenuScreen} />
+    </MenuStack.Navigator>
+  );
+}
+
+function ProfileStackScreen() {
+  const options = useStackOptions();
+  return (
+    <ProfileStack.Navigator screenOptions={options}>
+      <ProfileStack.Screen name="Profile" component={ProfileScreen} />
+    </ProfileStack.Navigator>
+  );
+}
+
+function DashboardStackScreen() {
+  const options = useStackOptions();
+  return (
+    <DashboardStack.Navigator screenOptions={options}>
+      <DashboardStack.Screen name="Dashboard" component={ManagerDashboardScreen} options={{ title: 'Manager dashboard' }} />
+    </DashboardStack.Navigator>
+  );
+}
+
+const TAB_ICONS = {
+  MenuTab: 'restaurant',
+  DashboardTab: 'speedometer',
+  ProfileTab: 'person',
+};
+
+function MainTabs() {
+  const { user } = useAuth();
+  const { colors } = useTheme();
+  const isManager = user?.role === 'manager';
+
+  return (
+    <Tab.Navigator
+      initialRouteName={isManager ? 'DashboardTab' : 'MenuTab'}
+      screenOptions={({ route }) => ({
+        headerShown: false, // each tab has its own stack header
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+        tabBarIcon: ({ color, size, focused }) => (
+          <Ionicons name={focused ? TAB_ICONS[route.name] : `${TAB_ICONS[route.name]}-outline`} size={size} color={color} />
+        ),
+      })}
+    >
+      {/* Role-based tabs: the Dashboard only exists for managers. */}
+      {isManager ? (
+        <Tab.Screen name="DashboardTab" component={DashboardStackScreen} options={{ title: 'Dashboard' }} />
+      ) : (
+        <Tab.Screen name="MenuTab" component={MenuStackScreen} options={{ title: 'Menu' }} />
+      )}
+      <Tab.Screen name="ProfileTab" component={ProfileStackScreen} options={{ title: 'Profile' }} />
+    </Tab.Navigator>
+  );
+}
 
 export default function AppNavigator() {
+  const { colors, isDark } = useTheme();
+
+  const navTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: colors.primary,
+        background: colors.background,
+        card: colors.surface,
+        text: colors.text,
+        border: colors.border,
+        notification: colors.primary,
+      },
+    };
+  }, [colors, isDark]);
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Menu" component={MenuScreen} />
-        <Stack.Screen name="Dashboard" component={ManagerDashboardScreen} options={{ title: 'Manager dashboard' }} />
-      </Stack.Navigator>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
+      <RootStack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+        <RootStack.Screen name="Login" component={LoginScreen} />
+        <RootStack.Screen name="Main" component={MainTabs} />
+      </RootStack.Navigator>
     </NavigationContainer>
   );
 }

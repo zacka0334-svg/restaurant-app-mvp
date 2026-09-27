@@ -1,15 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { categories, fetchMenu } from '../data/menu';
+import { useTheme } from '../context/ThemeContext';
 
-const COLORS = { primary: '#D9480F', text: '#1F1A17', muted: '#6F655E', border: '#E7DBD0', bg: '#FFF8F2', white: '#FFFFFF', chip: '#F1E3D6', accent: '#F59F00', disabled: '#BDB5AE' };
 
 const SEARCH_DELAY = 400;
 const BACK_TO_TOP_OFFSET = 300;
 const MAX_RECENT = 5;
 
 function MenuCard({ item }) {
+  const { colors: COLORS } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const disabled = !item.isAvailable;
   return (
     <View style={[styles.card, disabled && { opacity: 0.5 }]}>
@@ -21,7 +23,7 @@ function MenuCard({ item }) {
         <View style={styles.footer}>
           <Text style={styles.price}>Rs {item.price}</Text>
           <Pressable disabled={disabled} style={[styles.add, disabled && { backgroundColor: COLORS.disabled }]}>
-            <Text style={{ color: COLORS.white, fontWeight: '700' }}>{disabled ? 'Unavailable' : 'Add'}</Text>
+            <Text style={{ color: COLORS.primaryText, fontWeight: '700' }}>{disabled ? 'Unavailable' : 'Add'}</Text>
           </Pressable>
         </View>
       </View>
@@ -30,6 +32,8 @@ function MenuCard({ item }) {
 }
 
 export default function MenuScreen({ navigation }) {
+  const { colors: COLORS } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const [menuItems, setMenuItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -135,7 +139,7 @@ export default function MenuScreen({ navigation }) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={{ color: COLORS.muted, marginTop: 12 }}>Loading today’s menu…</Text>
+        <Text style={{ color: COLORS.textMuted, marginTop: 12 }}>Loading today’s menu…</Text>
       </View>
     );
   }
@@ -146,17 +150,17 @@ export default function MenuScreen({ navigation }) {
         <Text style={{ fontSize: 40 }}>📡</Text>
         <Text style={{ color: COLORS.text, marginVertical: 8, textAlign: 'center' }}>{error}</Text>
         <Pressable onPress={() => setReloadKey((k) => k + 1)} style={styles.retry}>
-          <Text style={{ color: COLORS.white, fontWeight: '700' }}>Retry</Text>
+          <Text style={{ color: COLORS.primaryText, fontWeight: '700' }}>Retry</Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <View style={styles.searchBar}>
         <Pressable onPress={() => searchInputRef.current?.focus()} hitSlop={8} accessibilityLabel="Focus search">
-          <Ionicons name="search" size={20} color={COLORS.muted} />
+          <Ionicons name="search" size={20} color={COLORS.textMuted} />
         </Pressable>
         <TextInput
           ref={searchInputRef}
@@ -165,23 +169,23 @@ export default function MenuScreen({ navigation }) {
           onFocus={() => setIsSearchFocused(true)}
           onBlur={() => setIsSearchFocused(false)}
           placeholder="Search dishes, e.g. karahi"
-          placeholderTextColor={COLORS.muted}
+          placeholderTextColor={COLORS.textMuted}
           style={styles.searchInput}
           autoCorrect={false}
         />
         {query.length > 0 ? (
           <Pressable onPress={clearSearch} hitSlop={8} accessibilityLabel="Clear search">
-            <Ionicons name="close-circle" size={20} color={COLORS.muted} />
+            <Ionicons name="close-circle" size={20} color={COLORS.textMuted} />
           </Pressable>
         ) : null}
       </View>
       {isSearchFocused && query.length === 0 && recentSearches.length > 0 ? (
         <View style={styles.suggestions}>
-          <Text style={{ color: COLORS.muted, fontSize: 12, marginBottom: 6 }}>Recent searches</Text>
+          <Text style={{ color: COLORS.textMuted, fontSize: 12, marginBottom: 6 }}>Recent searches</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {recentSearches.map((t) => (
               <Pressable key={t} onPress={() => onChangeQuery(t)} style={[styles.chip, { marginBottom: 6 }]}>
-                <Text>{t}</Text>
+                <Text style={{ color: COLORS.text }}>{t}</Text>
               </Pressable>
             ))}
           </View>
@@ -190,7 +194,7 @@ export default function MenuScreen({ navigation }) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ padding: 12 }}>
         {categories.map((c) => (
           <Pressable key={c.id} onPress={() => setSelectedCategory(c.id)} style={[styles.chip, selectedCategory === c.id && { backgroundColor: COLORS.primary }]}>
-            <Text style={{ fontWeight: '600', color: selectedCategory === c.id ? COLORS.white : COLORS.text }}>{c.name}</Text>
+            <Text style={{ fontWeight: '600', color: selectedCategory === c.id ? COLORS.surface : COLORS.text }}>{c.name}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -204,7 +208,7 @@ export default function MenuScreen({ navigation }) {
           <View style={styles.center}>
             <Text style={{ fontSize: 40 }}>🔍</Text>
             <Text style={{ color: COLORS.text, fontWeight: '700' }}>No dishes found</Text>
-            <Text style={{ color: COLORS.muted, textAlign: 'center' }}>Nothing matches “{searchText}”. Try another word or category.</Text>
+            <Text style={{ color: COLORS.textMuted, textAlign: 'center' }}>Nothing matches “{searchText}”. Try another word or category.</Text>
           </View>
         }
         data={filteredItems}
@@ -216,28 +220,29 @@ export default function MenuScreen({ navigation }) {
       />
       {showBackToTop ? (
         <Pressable onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })} style={styles.fab} accessibilityLabel="Back to top">
-          <Ionicons name="arrow-up" size={18} color={COLORS.white} />
-          <Text style={{ color: COLORS.white, fontWeight: '700' }}>Top</Text>
+          <Ionicons name="arrow-up" size={18} color={COLORS.primaryText} />
+          <Text style={{ color: COLORS.primaryText, fontWeight: '700' }}>Top</Text>
         </Pressable>
       ) : null}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: COLORS.bg },
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginTop: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.border, borderRadius: 999, backgroundColor: COLORS.white },
+// Styles depend on the theme, so they are built from the active palette.
+const makeStyles = (COLORS) => StyleSheet.create({
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: COLORS.background },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginTop: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.border, borderRadius: 999, backgroundColor: COLORS.surface },
   searchInput: { flex: 1, minHeight: 44, color: COLORS.text },
-  suggestions: { marginHorizontal: 16, marginTop: 8, padding: 12, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, backgroundColor: COLORS.white },
-  debug: { alignSelf: 'flex-end', marginRight: 16, fontSize: 11, color: COLORS.muted },
+  suggestions: { marginHorizontal: 16, marginTop: 8, padding: 12, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, backgroundColor: COLORS.surface },
+  debug: { alignSelf: 'flex-end', marginRight: 16, fontSize: 11, color: COLORS.textMuted },
   fab: { position: 'absolute', right: 16, bottom: 16, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, elevation: 4 },
   retry: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
   chip: { backgroundColor: COLORS.chip, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, marginRight: 8 },
-  card: { flexDirection: 'row', gap: 12, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, padding: 12, marginBottom: 12 },
+  card: { flexDirection: 'row', gap: 12, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, padding: 12, marginBottom: 12 },
   image: { fontSize: 40, width: 60, textAlign: 'center' },
   name: { fontSize: 16, fontWeight: '800', color: COLORS.text },
   badge: { alignSelf: 'flex-start', backgroundColor: COLORS.accent, fontSize: 11, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, marginVertical: 2, overflow: 'hidden' },
-  desc: { color: COLORS.muted, fontSize: 13 },
+  desc: { color: COLORS.textMuted, fontSize: 13 },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
   price: { fontWeight: '800', color: COLORS.text },
   add: { backgroundColor: COLORS.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },

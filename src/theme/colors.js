@@ -1,40 +1,45 @@
 // Single theme file: light and dark palettes.
+// Brand: "Dastarkhwan" — emerald green with a saffron-gold accent.
 // Every screen reads its colours through useTheme(), so toggling the theme
 // re-colours the whole app instantly.
 
 export const lightColors = {
-  background: '#FFF8F2',
+  background: '#F3F7F5',
   surface: '#FFFFFF',
-  surfaceAlt: '#F6EDE4',
-  text: '#1F1A17',
-  textMuted: '#6F655E',
-  border: '#E7DBD0',
-  primary: '#D9480F',
+  surfaceAlt: '#E7F0EB',
+  text: '#10231C',
+  textMuted: '#5A6B63',
+  border: '#D3E1DA',
+  primary: '#0E6B4E',
   primaryText: '#FFFFFF',
-  accent: '#F59F00',
-  success: '#2B8A3E',
-  danger: '#C92A2A',
-  disabled: '#BDB5AE',
-  chip: '#F1E3D6',
+  accent: '#E0A91B',
+  success: '#2F9E44',
+  danger: '#D6336C',
+  disabled: '#A9B8B0',
+  chip: '#E2EDE7',
+  hero: '#0B5A41',
+  heroText: '#FFFFFF',
   overlay: 'rgba(0,0,0,0.45)',
 };
 
 export const darkColors = {
-  background: '#141110',
-  surface: '#1F1B19',
-  surfaceAlt: '#2A2522',
-  text: '#F5EFEA',
-  textMuted: '#A99F97',
-  border: '#3A3330',
-  primary: '#FF7A3D',
-  primaryText: '#1A0E07',
-  accent: '#FFC247',
+  background: '#0A1511',
+  surface: '#12201B',
+  surfaceAlt: '#192C25',
+  text: '#E6F2EC',
+  textMuted: '#92A79D',
+  border: '#24382F',
+  primary: '#3CC593',
+  primaryText: '#04130D',
+  accent: '#F2C14E',
   success: '#51CF66',
-  danger: '#FF6B6B',
-  disabled: '#5B534E',
-  chip: '#302925',
+  danger: '#FF6B8B',
+  disabled: '#3D5047',
+  chip: '#1B2F27',
+  hero: '#0F3A2C',
+  heroText: '#E6F2EC',
   overlay: 'rgba(0,0,0,0.65)',
 };
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 };
-export const radius = { sm: 8, md: 12, lg: 18, pill: 999 };
+export const radius = { sm: 10, md: 14, lg: 20, pill: 999 };

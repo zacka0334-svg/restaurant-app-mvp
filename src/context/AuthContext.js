@@ -17,7 +17,7 @@ function usersReducer(state, action) {
 }
 
 export function AuthProvider({ children }) {
-  const [users, dispatchUsers, isHydrated] = usePersistentReducer(usersReducer, seedUsers, '@rapp/users');
+  const [users, dispatchUsers, isHydrated] = usePersistentReducer(usersReducer, seedUsers, '@dastarkhwan/users');
   // The logged-in user lives here instead of in LoginScreen's local state (Q6).
   const [user, setUser] = useState(null);
 

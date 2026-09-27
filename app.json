@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Restaurant App MVP",
+    "name": "Dastarkhwan",
     "slug": "restaurant-app-mvp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFF4EC",
+        "backgroundColor": "#E8F0EC",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

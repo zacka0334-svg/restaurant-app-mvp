@@ -5,8 +5,8 @@ import { CANCEL_ORDER, PLACE_ORDER, UPDATE_STATUS, initialOrdersState, ordersRed
 const OrdersContext = createContext(undefined);
 
 export function OrdersProvider({ children }) {
-  // useReducer + AsyncStorage persistence (key: @rapp/orders).
-  const [state, dispatch, isHydrated] = usePersistentReducer(ordersReducer, initialOrdersState, '@rapp/orders');
+  // useReducer + AsyncStorage persistence (key: @dastarkhwan/orders).
+  const [state, dispatch, isHydrated] = usePersistentReducer(ordersReducer, initialOrdersState, '@dastarkhwan/orders');
 
   const placeOrder = useCallback(({ user, items, totals, type, tableId, pickupTime, promoCode }) => {
     const now = Date.now();

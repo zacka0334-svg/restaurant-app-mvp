@@ -1,4 +1,4 @@
-# 🍽️ Restaurant App MVP (React Native, frontend only)
+# 🍛 Dastarkhwan: Restaurant App MVP (React Native, frontend only)
 
 Assignment 1, Fall 2026. This is a working React Native (Expo) prototype of a restaurant app. Diners can browse the menu, search and sort it, fill a cart, apply promo codes, place dine-in or takeaway orders, book tables and track their orders. Managers can run incoming orders, reservations and the menu from a dashboard.
 
@@ -53,8 +53,8 @@ npm test
 
 | Role | Email | Password |
 |---|---|---|
-| Customer | `customer@restaurant.pk` | `Customer123` |
-| Manager | `manager@restaurant.pk` | `Manager123` |
+| Customer | `customer@dastarkhwan.pk` | `Customer123` |
+| Manager | `manager@dastarkhwan.pk` | `Manager123` |
 
 You can also sign up new accounts (as Customer or Manager); they are saved on the device.
 
@@ -162,7 +162,7 @@ Don't use them by default. Each one costs memory and a dependency comparison on 
 5. On Order Tracking: watch Pending → Preparing (10 s) → Ready (20 s) → Served (30 s).
 6. Place a second order, then open Reserve: pick tomorrow, see that 20:00 is disabled, book 19:00, confirm in the modal, and see the booking under My reservations.
 7. Open Profile: toggle dark mode, then log out.
-8. Log in as `manager@restaurant.pk`: on Incoming Orders, move the customer's order forward; on Reservations, accept the booking; on Menu, add an item, edit a price and switch a dish to unavailable.
+8. Log in as `manager@dastarkhwan.pk`: on Incoming Orders, move the customer's order forward; on Reservations, accept the booking; on Menu, add an item, edit a price and switch a dish to unavailable.
 9. Log back in as the customer: the menu change is visible immediately and the order shows the manager's status. Close and reopen the app: the data is still there (AsyncStorage).
 
 ## 7. Screenshots

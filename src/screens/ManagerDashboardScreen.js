@@ -127,7 +127,7 @@ function ReservationsTab() {
 }
 
 // -------------------------------------------------------------- Menu tab
-const NEW_ITEM = { name: '', price: '', description: '', category: 'mains', image: '🍽️' };
+const NEW_ITEM = { name: '', price: '', description: '', category: 'mains', image: '🍛' };
 function validateNewItem(v) {
   const e = {};
   if (v.name.trim().length < 3) e.name = 'Name must be at least 3 characters.';

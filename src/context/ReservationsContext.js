@@ -11,7 +11,7 @@ export function ReservationsProvider({ children }) {
   const [reservations, dispatch, isHydrated] = usePersistentReducer(
     reservationsReducer,
     mockReservations,
-    '@rapp/reservations'
+    '@dastarkhwan/reservations'
   );
 
   const value = useMemo(() => ({ reservations, dispatch, isHydrated }), [reservations, dispatch, isHydrated]);

@@ -50,12 +50,13 @@ export function AppButton({ title, onPress, variant = 'primary', disabled, loadi
   );
 }
 
-export function Field({ label, error, style, inputRef, right, ...inputProps }) {
+export function Field({ label, error, style, inputRef, left, right, ...inputProps }) {
   const { colors } = useTheme();
   return (
     <View style={[{ marginBottom: spacing.md }, style]}>
       {label ? <Text style={[styles.label, { color: colors.textMuted }]}>{label}</Text> : null}
       <View style={[styles.inputWrap, { backgroundColor: colors.surface, borderColor: error ? colors.danger : colors.border }]}>
+        {left}
         <TextInput
           ref={inputRef}
           placeholderTextColor={colors.textMuted}
@@ -100,7 +101,7 @@ export function Card({ children, style }) {
   return <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, style]}>{children}</View>;
 }
 
-export function EmptyState({ emoji = '🍽️', title, message, children }) {
+export function EmptyState({ emoji = '🍛', title, message, children }) {
   const { colors } = useTheme();
   return (
     <View style={styles.empty}>

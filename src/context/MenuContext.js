@@ -8,7 +8,7 @@ const MenuContext = createContext(undefined);
 // Shared menu: the Manager Dashboard edits it, the customer Menu reads it,
 // so changes appear on the customer side immediately.
 export function MenuProvider({ children }) {
-  const [menuItems, dispatch, isHydrated] = usePersistentReducer(menuReducer, seedMenu, '@rapp/menu');
+  const [menuItems, dispatch, isHydrated] = usePersistentReducer(menuReducer, seedMenu, '@dastarkhwan/menu');
 
   const addItem = useCallback(
     ({ name, description, price, category, image }) =>
@@ -20,7 +20,7 @@ export function MenuProvider({ children }) {
           description: description.trim() || 'Chef’s new addition.',
           price: Number(price),
           category,
-          image: image || '🍽️',
+          image: image || '🍛',
           isSpecial: false,
           isAvailable: true,
         },

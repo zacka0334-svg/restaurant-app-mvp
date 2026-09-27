@@ -7,22 +7,22 @@
 export const users = [
   {
     id: 'u1',
-    fullName: 'Ali Raza',
-    email: 'customer@restaurant.pk',
+    fullName: 'Ahmed Ali',
+    email: 'customer@dastarkhwan.pk',
     password: 'Customer123',
     role: 'customer',
   },
   {
     id: 'u2',
     fullName: 'Sara Khan',
-    email: 'sara@restaurant.pk',
+    email: 'sara@dastarkhwan.pk',
     password: 'Sara12345',
     role: 'customer',
   },
   {
     id: 'u3',
-    fullName: 'Usman Tariq',
-    email: 'manager@restaurant.pk',
+    fullName: 'Bilal Ahmad',
+    email: 'manager@dastarkhwan.pk',
     password: 'Manager123',
     role: 'manager',
   },

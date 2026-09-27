@@ -7,7 +7,7 @@ subtitle: "Restaurant App MVP (Frontend Only, React Native) — Assignment 1, Fa
 
 | | |
 |---|---|
-| **Project** | Restaurant App MVP ("Tasty Table") |
+| **Project** | Restaurant App MVP ("Dastarkhwan") |
 | **Document version** | 1.0 |
 | **Release covered** | MVP v1.0.0 (frontend prototype) |
 | **Platform** | React Native with Expo SDK 57 (Android, iOS, Expo Go) |
@@ -219,12 +219,12 @@ No database is used. The data sets below are JavaScript modules in `src/data/` (
 
 | Data Set Name | Fields | Description |
 |---|-----|----|
-| **Users** (`src/data/users.js`, persisted `@rapp/users`) | `id: string`, `fullName: string`, `email: string`, `password: string`, `role: 'customer' or 'manager'` | Registered accounts used for login. Seeded with 2 customers and 1 manager; sign-ups are appended in `AuthContext`. |
+| **Users** (`src/data/users.js`, persisted `@dastarkhwan/users`) | `id: string`, `fullName: string`, `email: string`, `password: string`, `role: 'customer' or 'manager'` | Registered accounts used for login. Seeded with 2 customers and 1 manager; sign-ups are appended in `AuthContext`. |
 | **Categories** (`src/data/menu.js`) | `id: string`, `name: string` | Menu groups shown as chips: All, Starters, Mains, Desserts, Drinks. |
-| **MenuItems** (`src/data/menu.js`, persisted `@rapp/menu`) | `id`, `name`, `description`, `price: number (Rs)`, `category: categoryId`, `image: emoji`, `isSpecial: boolean`, `isAvailable: boolean` | 16 dishes across 4 categories. Held in `MenuContext`; the manager can add items, edit prices and toggle availability. |
+| **MenuItems** (`src/data/menu.js`, persisted `@dastarkhwan/menu`) | `id`, `name`, `description`, `price: number (Rs)`, `category: categoryId`, `image: emoji`, `isSpecial: boolean`, `isAvailable: boolean` | 16 dishes across 4 categories. Held in `MenuContext`; the manager can add items, edit prices and toggle availability. |
 | **Tables** (`src/data/tables.js`) | `id`, `number: number`, `seats: number`, `location: string` | 7 tables seating 2 to 12 people; used for dine-in orders and reservation availability. |
-| **Reservations** (`src/data/tables.js` seed, persisted `@rapp/reservations`) | `id`, `customerId`, `name`, `phone`, `date: 'YYYY-MM-DD'`, `time: 'HH:00'`, `partySize: 1–12`, `tableId`, `status: Pending or Accepted or Declined or Cancelled`, `createdAt: timestamp` | Table bookings. Seeded so that tomorrow 20:00 is fully booked (slot shown disabled). Held in `ReservationsContext`. |
-| **Orders** (persisted `@rapp/orders`) | `id`, `customerId`, `customerName`, `items: [{id, name, price, quantity, note}]`, `totals: {subtotal, discount, serviceCharge, salesTax, grandTotal}`, `total`, `promoCode`, `type: Dine-in or Takeaway`, `tableId`, `pickupTime`, `status`, `timestamp`, `manualOverride: boolean`, `history: [{status, at, by}]` | Placed orders, held in `OrdersContext` (`useReducer`). Starts empty. |
+| **Reservations** (`src/data/tables.js` seed, persisted `@dastarkhwan/reservations`) | `id`, `customerId`, `name`, `phone`, `date: 'YYYY-MM-DD'`, `time: 'HH:00'`, `partySize: 1–12`, `tableId`, `status: Pending or Accepted or Declined or Cancelled`, `createdAt: timestamp` | Table bookings. Seeded so that tomorrow 20:00 is fully booked (slot shown disabled). Held in `ReservationsContext`. |
+| **Orders** (persisted `@dastarkhwan/orders`) | `id`, `customerId`, `customerName`, `items: [{id, name, price, quantity, note}]`, `totals: {subtotal, discount, serviceCharge, salesTax, grandTotal}`, `total`, `promoCode`, `type: Dine-in or Takeaway`, `tableId`, `pickupTime`, `status`, `timestamp`, `manualOverride: boolean`, `history: [{status, at, by}]` | Placed orders, held in `OrdersContext` (`useReducer`). Starts empty. |
 | **Cart** (in memory, `CartContext`) | `items: [{id, name, price, image, quantity, note}]`, `promoCode: string or null`, `discountPercent: number` | The current customer's basket, managed by `cartReducer`. Not persisted (cleared on logout). |
 | **PromoCodes** (`src/data/promoCodes.js`) | `code → discountPercent` | `WELCOME10 → 10`, `FEAST20 → 20`. |
 

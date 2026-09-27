@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, T
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { useMenu } from '../context/MenuContext';
 import { ADD_ITEM } from '../reducers/cartReducer';
 import { categories, fetchMenu } from '../data/menu';
@@ -22,6 +23,7 @@ const MAX_RECENT = 5;
 
 export default function MenuScreen({ navigation }) {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const { menuItems } = useMenu(); // shared with the Manager Dashboard (Q10)
   const { state: cart, dispatch } = useCart();
 
@@ -184,6 +186,12 @@ export default function MenuScreen({ navigation }) {
 
   return (
     <Screen>
+      {/* Greeting */}
+      <View style={styles.greeting}>
+        <Text style={{ color: colors.textMuted, fontSize: 13 }}>Assalam o Alaikum{user ? `, ${user.fullName.split(' ')[0]}` : ''} 👋</Text>
+        <Text style={[styles.greetingTitle, { color: colors.text }]}>What are you craving today?</Text>
+      </View>
+
       {/* Search bar */}
       <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Pressable onPress={() => searchInputRef.current?.focus()} hitSlop={8} accessibilityLabel="Focus search">
@@ -276,6 +284,8 @@ export default function MenuScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
+  greeting: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  greetingTitle: { fontSize: 20, fontWeight: '900', marginTop: 2 },
   searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.lg, marginTop: spacing.md, paddingHorizontal: spacing.md, borderWidth: 1, borderRadius: radius.pill },
   searchInput: { flex: 1, minHeight: 44, fontSize: 15 },
   suggestions: { marginHorizontal: spacing.lg, marginTop: spacing.sm, padding: spacing.md, borderWidth: 1, borderRadius: radius.md },

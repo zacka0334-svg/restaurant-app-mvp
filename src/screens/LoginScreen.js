@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import useForm from '../hooks/useForm';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton, Field, Screen } from '../components/ui';
 import { radius, spacing } from '../theme/colors';
 
@@ -35,6 +36,7 @@ const validateSignup = (v) => validateAuth(v, 'signup');
 
 export default function LoginScreen({ navigation }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { login, findUser, emailExists, signup } = useAuth();
 
   // UI mode, password visibility and submitting flag stay as local useState.
@@ -96,120 +98,157 @@ export default function LoginScreen({ navigation }) {
     </Pressable>
   );
 
+  const fillDemo = (email, password) => {
+    handleChange('email')(email);
+    handleChange('password')(password);
+  };
+
+  const icon = (name) => <Ionicons name={name} size={18} color={colors.textMuted} style={{ marginRight: 8 }} />;
+
   return (
-    <Screen edges={['top', 'bottom', 'left', 'right']}>
+    <Screen edges={['bottom', 'left', 'right']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.logo}>🍽️</Text>
-          <Text style={[styles.title, { color: colors.text }]}>Tasty Table</Text>
-          <Text style={{ color: colors.textMuted, textAlign: 'center', marginBottom: spacing.xl }}>
-            Browse the menu, book a table and order ahead.
-          </Text>
-
-          {/* Mode switch */}
-          <View style={[styles.segment, { backgroundColor: colors.surfaceAlt }]}>
-            {['login', 'signup'].map((m) => (
-              <Pressable
-                key={m}
-                onPress={() => m !== mode && switchMode()}
-                style={[styles.segmentItem, mode === m && { backgroundColor: colors.primary }]}
-              >
-                <Text style={{ fontWeight: '700', color: mode === m ? colors.primaryText : colors.text }}>
-                  {m === 'login' ? 'Login' : 'Sign up'}
-                </Text>
-              </Pressable>
-            ))}
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+          {/* Brand header */}
+          <View style={[styles.hero, { backgroundColor: colors.hero, paddingTop: insets.top + spacing.xl }]}>
+            <View style={[styles.logoCircle, { backgroundColor: colors.accent }]}>
+              <Text style={styles.logo}>🍛</Text>
+            </View>
+            <Text style={[styles.brand, { color: colors.heroText }]}>Dastarkhwan</Text>
+            <Text style={[styles.tagline, { color: colors.heroText }]}>Order ahead · Book a table · Skip the queue</Text>
           </View>
 
-          {isSignup ? (
-            <Field
-              label="Full name"
-              value={values.fullName}
-              onChangeText={handleChange('fullName')}
-              error={errors.fullName}
-              placeholder="Ali Raza"
-              autoCapitalize="words"
-            />
-          ) : null}
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {/* Mode switch: underline tabs */}
+            <View style={[styles.tabs, { borderColor: colors.border }]}>
+              {['login', 'signup'].map((m) => {
+                const active = mode === m;
+                return (
+                  <Pressable key={m} onPress={() => !active && switchMode()} style={styles.tab}>
+                    <Text style={{ fontWeight: '800', fontSize: 15, color: active ? colors.primary : colors.textMuted }}>
+                      {m === 'login' ? 'Sign in' : 'Create account'}
+                    </Text>
+                    <View style={[styles.tabLine, { backgroundColor: active ? colors.primary : 'transparent' }]} />
+                  </Pressable>
+                );
+              })}
+            </View>
 
-          <Field
-            label="Email"
-            value={values.email}
-            onChangeText={handleChange('email')}
-            error={errors.email}
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+            <Text style={[styles.welcome, { color: colors.text }]}>
+              {isSignup ? 'Join us for your next meal' : 'Welcome back!'}
+            </Text>
 
-          <Field
-            label="Password"
-            value={values.password}
-            onChangeText={handleChange('password')}
-            error={errors.password}
-            placeholder="At least 8 characters with a digit"
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            right={eye}
-          />
-
-          {isSignup ? (
-            <>
+            {isSignup ? (
               <Field
-                label="Confirm password"
-                value={values.confirmPassword}
-                onChangeText={handleChange('confirmPassword')}
-                error={errors.confirmPassword}
-                placeholder="Repeat your password"
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
+                label="Full name"
+                value={values.fullName}
+                onChangeText={handleChange('fullName')}
+                error={errors.fullName}
+                placeholder="Ahmed Ali"
+                autoCapitalize="words"
+                left={icon('person-outline')}
               />
+            ) : null}
 
-              <Text style={[styles.label, { color: colors.textMuted }]}>I am a</Text>
-              <View style={styles.roleRow}>
-                {[
-                  { key: 'customer', label: 'Customer', icon: 'person-outline' },
-                  { key: 'manager', label: 'Manager', icon: 'briefcase-outline' },
-                ].map((r) => {
-                  const selected = values.role === r.key;
-                  return (
-                    <Pressable
-                      key={r.key}
-                      onPress={() => handleChange('role')(r.key)}
-                      style={[
-                        styles.roleOption,
-                        { borderColor: selected ? colors.primary : colors.border, backgroundColor: colors.surface },
-                      ]}
-                    >
-                      <Ionicons name={r.icon} size={18} color={selected ? colors.primary : colors.textMuted} />
-                      <Text style={{ color: selected ? colors.primary : colors.text, fontWeight: '700' }}>{r.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </>
-          ) : null}
+            <Field
+              label="Email"
+              value={values.email}
+              onChangeText={handleChange('email')}
+              error={errors.email}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              left={icon('mail-outline')}
+            />
 
-          <AppButton
-            title={isSignup ? 'Create account' : 'Login'}
-            onPress={() => handleSubmit(onValid)}
-            loading={isSubmitting}
-            disabled={isSubmitting}
-            style={{ marginTop: spacing.md }}
-          />
+            <Field
+              label="Password"
+              value={values.password}
+              onChangeText={handleChange('password')}
+              error={errors.password}
+              placeholder="At least 8 characters with a digit"
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              left={icon('lock-closed-outline')}
+              right={eye}
+            />
 
-          <Pressable onPress={switchMode} style={{ marginTop: spacing.lg }}>
-            <Text style={{ color: colors.primary, textAlign: 'center', fontWeight: '600' }}>
-              {isSignup ? 'Already have an account? Login' : "New here? Create an account"}
-            </Text>
-          </Pressable>
+            {isSignup ? (
+              <>
+                <Field
+                  label="Confirm password"
+                  value={values.confirmPassword}
+                  onChangeText={handleChange('confirmPassword')}
+                  error={errors.confirmPassword}
+                  placeholder="Repeat your password"
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  left={icon('shield-checkmark-outline')}
+                />
 
-          <View style={[styles.hint, { backgroundColor: colors.surfaceAlt }]}>
-            <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-              Demo customer: customer@restaurant.pk / Customer123{'\n'}Demo manager: manager@restaurant.pk / Manager123
-            </Text>
+                <Text style={[styles.label, { color: colors.textMuted }]}>Sign up as</Text>
+                <View style={styles.roleRow}>
+                  {[
+                    { key: 'customer', label: 'Diner', sub: 'Order & reserve', emoji: '🙋' },
+                    { key: 'manager', label: 'Manager', sub: 'Run the kitchen', emoji: '👨‍🍳' },
+                  ].map((r) => {
+                    const selected = values.role === r.key;
+                    return (
+                      <Pressable
+                        key={r.key}
+                        onPress={() => handleChange('role')(r.key)}
+                        style={[
+                          styles.roleOption,
+                          {
+                            borderColor: selected ? colors.primary : colors.border,
+                            backgroundColor: selected ? colors.surfaceAlt : colors.surface,
+                          },
+                        ]}
+                      >
+                        <Text style={{ fontSize: 24 }}>{r.emoji}</Text>
+                        <Text style={{ color: selected ? colors.primary : colors.text, fontWeight: '800' }}>{r.label}</Text>
+                        <Text style={{ color: colors.textMuted, fontSize: 11 }}>{r.sub}</Text>
+                        {selected ? (
+                          <Ionicons name="checkmark-circle" size={18} color={colors.primary} style={styles.roleCheck} />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
+
+            <AppButton
+              title={isSignup ? 'Create my account' : 'Sign in'}
+              onPress={() => handleSubmit(onValid)}
+              loading={isSubmitting}
+              disabled={isSubmitting}
+              style={{ marginTop: spacing.sm, borderRadius: radius.pill }}
+              icon={<Ionicons name={isSignup ? 'person-add-outline' : 'arrow-forward-circle-outline'} size={20} color={colors.primaryText} />}
+            />
           </View>
+
+          {/* Demo accounts: tap to fill the form */}
+          {!isSignup ? (
+            <View style={styles.demo}>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8, textAlign: 'center' }}>Quick demo accounts (tap to fill)</Text>
+              <View style={styles.demoRow}>
+                <Pressable
+                  onPress={() => fillDemo('customer@dastarkhwan.pk', 'Customer123')}
+                  style={[styles.demoChip, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                >
+                  <Text style={{ color: colors.text, fontWeight: '700' }}>🙋 Diner</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => fillDemo('manager@dastarkhwan.pk', 'Manager123')}
+                  style={[styles.demoChip, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                >
+                  <Text style={{ color: colors.text, fontWeight: '700' }}>👨‍🍳 Manager</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
@@ -217,13 +256,25 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.xl, flexGrow: 1, justifyContent: 'center', maxWidth: 480, width: '100%', alignSelf: 'center' },
-  logo: { fontSize: 56, textAlign: 'center' },
-  title: { fontSize: 28, fontWeight: '900', textAlign: 'center' },
-  segment: { flexDirection: 'row', borderRadius: radius.md, padding: 4, marginBottom: spacing.lg },
-  segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: radius.sm },
+  hero: { alignItems: 'center', paddingBottom: 56, paddingHorizontal: spacing.xl, borderBottomLeftRadius: 40, borderBottomRightRadius: 40 },
+  logoCircle: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  logo: { fontSize: 40 },
+  brand: { fontSize: 30, fontWeight: '900', letterSpacing: 0.5 },
+  tagline: { fontSize: 13, opacity: 0.85, marginTop: 4, textAlign: 'center' },
+  card: {
+    marginTop: -36, marginHorizontal: spacing.lg, padding: spacing.xl, borderRadius: 24, borderWidth: 1,
+    maxWidth: 480, width: '92%', alignSelf: 'center',
+    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+  },
+  tabs: { flexDirection: 'row', borderBottomWidth: 1, marginBottom: spacing.lg },
+  tab: { flex: 1, alignItems: 'center', paddingTop: 4 },
+  tabLine: { height: 3, width: '60%', borderRadius: 2, marginTop: 10 },
+  welcome: { fontSize: 20, fontWeight: '900', marginBottom: spacing.lg },
   label: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
   roleRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
-  roleOption: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderRadius: radius.md, paddingVertical: 12 },
-  hint: { marginTop: spacing.xl, padding: spacing.md, borderRadius: radius.md },
+  roleOption: { flex: 1, alignItems: 'center', gap: 2, borderWidth: 1.5, borderRadius: radius.lg, paddingVertical: 14 },
+  roleCheck: { position: 'absolute', top: 8, right: 8 },
+  demo: { marginTop: spacing.xl, marginBottom: spacing.xl, alignItems: 'center' },
+  demoRow: { flexDirection: 'row', gap: spacing.md },
+  demoChip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: radius.pill, borderWidth: 1 },
 });

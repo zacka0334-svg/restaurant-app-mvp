@@ -83,7 +83,7 @@ restaurant-app-mvp/
 ├── App.js                      # Providers + loading gate + navigator
 ├── A1/
 │   ├── SRS.pdf                 # Question 1
-│   ├── source/SRS.md           # SRS source (build_srs.sh → PDF)
+│   ├── source/SRS.md           # SRS source text
 │   └── UML/                    # Question 2 (PNG + PlantUML sources)
 ├── __tests__/                  # Jest tests for cartReducer and pricing
 ├── docs/screenshots/

@@ -3,6 +3,8 @@ import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useCart } from '../context/CartContext';
+import { CLEAR_CART } from '../reducers/cartReducer';
 import { resetToLogin } from '../navigation/navigationRef';
 import { AppButton, Card, Screen } from '../components/ui';
 import { spacing } from '../theme/colors';
@@ -11,6 +13,7 @@ export default function ProfileScreen() {
   // No props: user and theme come from context (no prop drilling).
   const { user, logout } = useAuth();
   const { isDark, toggleTheme, colors } = useTheme();
+  const { dispatch: cartDispatch } = useCart();
 
   const onLogout = () =>
     Alert.alert('Log out?', 'You will return to the login screen.', [
@@ -19,6 +22,7 @@ export default function ProfileScreen() {
         text: 'Log out',
         style: 'destructive',
         onPress: () => {
+          cartDispatch({ type: CLEAR_CART });
           // Reset the whole navigation stack first, then clear the user.
           resetToLogin();
           logout();

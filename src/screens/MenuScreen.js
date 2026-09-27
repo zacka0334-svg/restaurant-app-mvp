@@ -3,13 +3,15 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, T
 import { Ionicons } from '@expo/vector-icons';
 import { categories, fetchMenu } from '../data/menu';
 import { useTheme } from '../context/ThemeContext';
+import { useCart } from '../context/CartContext';
+import { ADD_ITEM } from '../reducers/cartReducer';
 
 
 const SEARCH_DELAY = 400;
 const BACK_TO_TOP_OFFSET = 300;
 const MAX_RECENT = 5;
 
-function MenuCard({ item }) {
+function MenuCard({ item, quantityInCart, onAdd }) {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const disabled = !item.isAvailable;
@@ -22,8 +24,8 @@ function MenuCard({ item }) {
         <Text style={styles.desc} numberOfLines={2}>{item.description}</Text>
         <View style={styles.footer}>
           <Text style={styles.price}>Rs {item.price}</Text>
-          <Pressable disabled={disabled} style={[styles.add, disabled && { backgroundColor: COLORS.disabled }]}>
-            <Text style={{ color: COLORS.primaryText, fontWeight: '700' }}>{disabled ? 'Unavailable' : 'Add'}</Text>
+          <Pressable onPress={() => onAdd(item)} disabled={disabled} accessibilityLabel={`Add ${item.name} to cart`} style={[styles.add, disabled && { backgroundColor: COLORS.disabled }]}>
+            <Text style={{ color: COLORS.primaryText, fontWeight: '700' }}>{disabled ? 'Unavailable' : quantityInCart > 0 ? `Add (${quantityInCart})` : 'Add to cart'}</Text>
           </Pressable>
         </View>
       </View>
@@ -42,6 +44,12 @@ export default function MenuScreen({ navigation }) {
   const [filteredItems, setFilteredItems] = useState([]);
   const [reloadKey, setReloadKey] = useState(0); // bumping it re-runs the load (Retry)
   const requestRef = useRef(null);
+  const { state: cart, dispatch } = useCart();
+  const quantityById = useMemo(() => {
+    const map = {};
+    cart.items.forEach((i) => { map[i.id] = i.quantity; });
+    return map;
+  }, [cart.items]);
 
   // ---- Q5: search -----------------------------------------------------------
   const [query, setQuery] = useState('');          // what the user is typing
@@ -213,7 +221,9 @@ export default function MenuScreen({ navigation }) {
         }
         data={filteredItems}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <MenuCard item={item} />}
+        renderItem={({ item }) => (
+          <MenuCard item={item} quantityInCart={quantityById[item.id] || 0} onAdd={(i) => dispatch({ type: ADD_ITEM, payload: i })} />
+        )}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshing={refreshing}
         onRefresh={onRefresh}

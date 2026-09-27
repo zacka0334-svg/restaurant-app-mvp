@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { CartProvider } from './src/context/CartContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 function ThemedStatusBar() {
@@ -15,8 +16,10 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <ThemedStatusBar />
-          <AppNavigator />
+          <CartProvider>
+            <ThemedStatusBar />
+            <AppNavigator />
+          </CartProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

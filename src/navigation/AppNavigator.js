@@ -4,17 +4,20 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
 import { navigationRef } from './navigationRef';
 
 import LoginScreen from '../screens/LoginScreen';
 import MenuScreen from '../screens/MenuScreen';
+import CartScreen from '../screens/CartScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ManagerDashboardScreen from '../screens/ManagerDashboardScreen';
 
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const MenuStack = createNativeStackNavigator();
+const CartStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 const DashboardStack = createNativeStackNavigator();
 
@@ -41,6 +44,15 @@ function MenuStackScreen() {
   );
 }
 
+function CartStackScreen() {
+  const options = useStackOptions();
+  return (
+    <CartStack.Navigator screenOptions={options}>
+      <CartStack.Screen name="Cart" component={CartScreen} options={{ title: 'Your cart' }} />
+    </CartStack.Navigator>
+  );
+}
+
 function ProfileStackScreen() {
   const options = useStackOptions();
   return (
@@ -61,12 +73,14 @@ function DashboardStackScreen() {
 
 const TAB_ICONS = {
   MenuTab: 'restaurant',
+  CartTab: 'cart',
   DashboardTab: 'speedometer',
   ProfileTab: 'person',
 };
 
 function MainTabs() {
   const { user } = useAuth();
+  const { itemCount } = useCart();
   const { colors } = useTheme();
   const isManager = user?.role === 'manager';
 
@@ -87,7 +101,18 @@ function MainTabs() {
       {isManager ? (
         <Tab.Screen name="DashboardTab" component={DashboardStackScreen} options={{ title: 'Dashboard' }} />
       ) : (
-        <Tab.Screen name="MenuTab" component={MenuStackScreen} options={{ title: 'Menu' }} />
+        <>
+          <Tab.Screen name="MenuTab" component={MenuStackScreen} options={{ title: 'Menu' }} />
+          <Tab.Screen
+            name="CartTab"
+            component={CartStackScreen}
+            options={{
+              title: 'Cart',
+              tabBarBadge: itemCount > 0 ? itemCount : undefined, // live item count badge
+              tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.primaryText },
+            }}
+          />
+        </>
       )}
       <Tab.Screen name="ProfileTab" component={ProfileStackScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>

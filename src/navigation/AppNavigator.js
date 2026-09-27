@@ -11,6 +11,7 @@ import { navigationRef } from './navigationRef';
 import LoginScreen from '../screens/LoginScreen';
 import MenuScreen from '../screens/MenuScreen';
 import CartScreen from '../screens/CartScreen';
+import OrderSummaryScreen from '../screens/OrderSummaryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ManagerDashboardScreen from '../screens/ManagerDashboardScreen';
 
@@ -49,6 +50,7 @@ function CartStackScreen() {
   return (
     <CartStack.Navigator screenOptions={options}>
       <CartStack.Screen name="Cart" component={CartScreen} options={{ title: 'Your cart' }} />
+      <CartStack.Screen name="OrderSummary" component={OrderSummaryScreen} options={{ title: 'Order summary' }} />
     </CartStack.Navigator>
   );
 }

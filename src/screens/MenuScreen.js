@@ -1,64 +1,47 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { categories, fetchMenu } from '../data/menu';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { ADD_ITEM } from '../reducers/cartReducer';
+import { categories, fetchMenu } from '../data/menu';
+import MenuItemCard from '../components/MenuItemCard';
+import { AppButton, Chip, EmptyState, Screen } from '../components/ui';
+import { radius, spacing } from '../theme/colors';
 
-
-const SEARCH_DELAY = 400;
+const SORT_OPTIONS = [
+  { key: 'default', label: 'Recommended' },
+  { key: 'priceAsc', label: 'Price ↑' },
+  { key: 'priceDesc', label: 'Price ↓' },
+  { key: 'nameAsc', label: 'Name A–Z' },
+];
 const BACK_TO_TOP_OFFSET = 300;
 const MAX_RECENT = 5;
 
-function MenuCard({ item, quantityInCart, onAdd }) {
-  const { colors: COLORS } = useTheme();
-  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
-  const disabled = !item.isAvailable;
-  return (
-    <View style={[styles.card, disabled && { opacity: 0.5 }]}>
-      <Text style={styles.image}>{item.image}</Text>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.name}>{item.name}</Text>
-        {item.isSpecial ? <Text style={styles.badge}>⭐ Daily Special</Text> : null}
-        <Text style={styles.desc} numberOfLines={2}>{item.description}</Text>
-        <View style={styles.footer}>
-          <Text style={styles.price}>Rs {item.price}</Text>
-          <Pressable onPress={() => onAdd(item)} disabled={disabled} accessibilityLabel={`Add ${item.name} to cart`} style={[styles.add, disabled && { backgroundColor: COLORS.disabled }]}>
-            <Text style={{ color: COLORS.primaryText, fontWeight: '700' }}>{disabled ? 'Unavailable' : quantityInCart > 0 ? `Add (${quantityInCart})` : 'Add to cart'}</Text>
-          </Pressable>
-        </View>
-      </View>
-    </View>
-  );
-}
-
 export default function MenuScreen({ navigation }) {
-  const { colors: COLORS } = useTheme();
-  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+  const { colors } = useTheme();
+  const { state: cart, dispatch } = useCart();
+
+  // ---- Q4: data, loading / error / refresh state ---------------------------
   const [menuItems, setMenuItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [filteredItems, setFilteredItems] = useState([]);
-  const [reloadKey, setReloadKey] = useState(0); // bumping it re-runs the load (Retry)
-  const requestRef = useRef(null);
-  const { state: cart, dispatch } = useCart();
-  const quantityById = useMemo(() => {
-    const map = {};
-    cart.items.forEach((i) => { map[i.id] = i.quantity; });
-    return map;
-  }, [cart.items]);
+  const requestRef = useRef(null); // holds the cancel() of the running request
 
-  // ---- Q5: search -----------------------------------------------------------
-  const [query, setQuery] = useState('');          // what the user is typing
-  const [searchText, setSearchText] = useState(''); // applied after the debounce
+  // ---- Q4/Q8: filters --------------------------------------------------------
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortOrder, setSortOrder] = useState('default');
+  const [favourites, setFavourites] = useState([]); // array of item ids
+
+  // ---- Q5/Q9: search --------------------------------------------------------
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState(''); // applied after 400 ms
+  const debounceRef = useRef(null); // timeout id survives re-renders without causing one
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
-  const searchInputRef = useRef(null);  // TextInput element
-  const debounceRef = useRef(null);     // timeout id, must survive re-renders
-  const previousQueryRef = useRef('');  // avoids duplicate consecutive searches
+  const searchInputRef = useRef(null);
+  const previousQueryRef = useRef('');
 
   // ---- Q5: scrolling --------------------------------------------------------
   const listRef = useRef(null);
@@ -72,29 +55,115 @@ export default function MenuScreen({ navigation }) {
   const renderCount = useRef(0);
   renderCount.current += 1;
 
-  // Manual debounce: every keystroke clears the pending timeout and starts a
-  // new one; the search is applied after 400 ms without typing.
+  // Simulated fetch (1.5 s). Used on mount, by Retry and by pull-to-refresh.
+  const load = useCallback(
+    (asRefresh = false) => {
+      requestRef.current?.cancel();
+      if (asRefresh) setRefreshing(true);
+      else setIsLoading(true);
+      setError(null);
+
+      const request = fetchMenu();
+      requestRef.current = request;
+      request.promise
+        .then((data) => {
+          setMenuItems(data);
+          setError(null);
+        })
+        .catch((err) => setError(err.message))
+        .finally(() => {
+          setIsLoading(false);
+          setRefreshing(false);
+        });
+    },
+    []
+  );
+
+  // Q4: runs once on mount. The cleanup clears the timer so no state update
+  // happens after the screen unmounts.
+  useEffect(() => {
+    load(false);
+    return () => requestRef.current?.cancel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Q5: manual debounce. Every keystroke clears the pending timeout; the
+  // search is applied after 400 ms of inactivity.
   const onChangeQuery = (text) => {
     setQuery(text);
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setSearchText(text);
-      const term = text.trim();
-      if (term && term.toLowerCase() !== previousQueryRef.current.toLowerCase()) {
-        previousQueryRef.current = term;
-        setRecentSearches((prev) => [term, ...prev.filter((t) => t.toLowerCase() !== term.toLowerCase())].slice(0, MAX_RECENT));
-      }
-    }, SEARCH_DELAY);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(text), 400);
   };
 
-  // Clear the pending debounce timer when the screen unmounts.
+  // Clear the pending debounce timer on unmount.
   useEffect(() => () => clearTimeout(debounceRef.current), []);
+
+  // Q5: remember the last five distinct searches. The previous query is kept
+  // in a ref so the same term typed twice in a row is not added again.
+  useEffect(() => {
+    const term = debouncedQuery.trim();
+    if (!term || term.toLowerCase() === previousQueryRef.current.toLowerCase()) return;
+    previousQueryRef.current = term;
+    setRecentSearches((prev) => [term, ...prev.filter((t) => t.toLowerCase() !== term.toLowerCase())].slice(0, MAX_RECENT));
+  }, [debouncedQuery]);
+
+  // Q8: one useMemo replaces the old filteredItems state + effect.
+  // Derived data must not be stored in state: it can be recomputed from
+  // menuItems, selectedCategory, debouncedQuery and sortOrder at any time, and
+  // copying it into state means an extra render and a risk of the copy getting
+  // out of sync with its sources.
+  const visibleItems = useMemo(() => {
+    const term = debouncedQuery.trim().toLowerCase();
+    const filtered = menuItems.filter(
+      (item) =>
+        (selectedCategory === 'all' || item.category === selectedCategory) &&
+        (!term || item.name.toLowerCase().includes(term) || item.description.toLowerCase().includes(term))
+    );
+    const sorted = [...filtered];
+    if (sortOrder === 'priceAsc') sorted.sort((a, b) => a.price - b.price);
+    if (sortOrder === 'priceDesc') sorted.sort((a, b) => b.price - a.price);
+    if (sortOrder === 'nameAsc') sorted.sort((a, b) => a.name.localeCompare(b.name));
+    return sorted;
+  }, [menuItems, selectedCategory, debouncedQuery, sortOrder]);
+
+  // Q4: header title shows the number of items currently shown.
+  useEffect(() => {
+    navigation.setOptions({ title: isLoading ? 'Menu' : `Menu (${visibleItems.length})` });
+  }, [navigation, visibleItems.length, isLoading]);
+
+  const quantityById = useMemo(() => {
+    const map = {};
+    cart.items.forEach((i) => { map[i.id] = i.quantity; });
+    return map;
+  }, [cart.items]);
+
+  // Q8: stable handler references so React.memo on MenuItemCard works.
+  const handleAdd = useCallback((item) => dispatch({ type: ADD_ITEM, payload: item }), [dispatch]);
+  const handleToggleFavourite = useCallback(
+    (id) => setFavourites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id])),
+    []
+  );
+
+  const renderItem = useCallback(
+    ({ item }) => (
+      <MenuItemCard
+        item={item}
+        isFavourite={favourites.includes(item.id)}
+        quantityInCart={quantityById[item.id] || 0}
+        onAdd={handleAdd}
+        onToggleFavourite={handleToggleFavourite}
+      />
+    ),
+    [favourites, quantityById, handleAdd, handleToggleFavourite]
+  );
+
+  const keyExtractor = useCallback((item) => item.id, []);
 
   const clearSearch = () => {
     clearTimeout(debounceRef.current);
     setQuery('');
-    setSearchText('');
-    searchInputRef.current?.focus(); // keep focus
+    setDebouncedQuery('');
+    searchInputRef.current?.focus(); // keep focus after clearing
   };
 
   const onScroll = (e) => {
@@ -102,73 +171,36 @@ export default function MenuScreen({ navigation }) {
     if (shouldShow !== showBackToTop) setShowBackToTop(shouldShow);
   };
 
-  // Load the menu when the screen mounts (and on Retry).
-  useEffect(() => {
-    setIsLoading(true);
-    setError(null);
-    const request = fetchMenu();
-    requestRef.current = request;
-    request.promise
-      .then((data) => setMenuItems(data))
-      .catch((err) => setError(err.message))
-      .finally(() => setIsLoading(false));
-    // Cleanup: clear the timer so no state update happens after unmount.
-    return () => request.cancel();
-  }, [reloadKey]);
+  const scrollToTop = () => listRef.current?.scrollToOffset({ offset: 0, animated: true });
 
-  // Re-filter whenever the category, the search text or the data changes.
-  useEffect(() => {
-    const term = searchText.trim().toLowerCase();
-    setFilteredItems(
-      menuItems.filter(
-        (i) =>
-          (selectedCategory === 'all' || i.category === selectedCategory) &&
-          (!term || i.name.toLowerCase().includes(term) || i.description.toLowerCase().includes(term))
-      )
-    );
-  }, [selectedCategory, searchText, menuItems]);
-
-  // Header shows how many items are currently displayed.
-  useEffect(() => {
-    navigation.setOptions({ title: `Menu (${filteredItems.length})` });
-  }, [navigation, filteredItems.length]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    const request = fetchMenu();
-    requestRef.current = request;
-    request.promise
-      .then((data) => setMenuItems(data))
-      .catch((err) => setError(err.message))
-      .finally(() => setRefreshing(false));
-  };
-
+  // ---------------------------------------------------------------- render --
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={{ color: COLORS.textMuted, marginTop: 12 }}>Loading today’s menu…</Text>
-      </View>
+      <Screen style={styles.center}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ color: colors.textMuted, marginTop: 12 }}>Loading today’s menu…</Text>
+      </Screen>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={{ fontSize: 40 }}>📡</Text>
-        <Text style={{ color: COLORS.text, marginVertical: 8, textAlign: 'center' }}>{error}</Text>
-        <Pressable onPress={() => setReloadKey((k) => k + 1)} style={styles.retry}>
-          <Text style={{ color: COLORS.primaryText, fontWeight: '700' }}>Retry</Text>
-        </Pressable>
-      </View>
+      <Screen style={styles.center}>
+        <EmptyState emoji="📡" title="Something went wrong" message={error}>
+          <AppButton title="Retry" onPress={() => load(false)} style={{ marginTop: 12, minWidth: 140 }} />
+        </EmptyState>
+      </Screen>
     );
   }
 
+  const showSuggestions = isSearchFocused && query.length === 0 && recentSearches.length > 0;
+
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <View style={styles.searchBar}>
+    <Screen>
+      {/* Search bar */}
+      <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Pressable onPress={() => searchInputRef.current?.focus()} hitSlop={8} accessibilityLabel="Focus search">
-          <Ionicons name="search" size={20} color={COLORS.textMuted} />
+          <Ionicons name="search" size={20} color={colors.textMuted} />
         </Pressable>
         <TextInput
           ref={searchInputRef}
@@ -177,83 +209,93 @@ export default function MenuScreen({ navigation }) {
           onFocus={() => setIsSearchFocused(true)}
           onBlur={() => setIsSearchFocused(false)}
           placeholder="Search dishes, e.g. karahi"
-          placeholderTextColor={COLORS.textMuted}
-          style={styles.searchInput}
+          placeholderTextColor={colors.textMuted}
+          style={[styles.searchInput, { color: colors.text }]}
+          returnKeyType="search"
           autoCorrect={false}
         />
         {query.length > 0 ? (
           <Pressable onPress={clearSearch} hitSlop={8} accessibilityLabel="Clear search">
-            <Ionicons name="close-circle" size={20} color={COLORS.textMuted} />
+            <Ionicons name="close-circle" size={20} color={colors.textMuted} />
           </Pressable>
         ) : null}
       </View>
-      {isSearchFocused && query.length === 0 && recentSearches.length > 0 ? (
-        <View style={styles.suggestions}>
-          <Text style={{ color: COLORS.textMuted, fontSize: 12, marginBottom: 6 }}>Recent searches</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {recentSearches.map((t) => (
-              <Pressable key={t} onPress={() => onChangeQuery(t)} style={[styles.chip, { marginBottom: 6 }]}>
-                <Text style={{ color: COLORS.text }}>{t}</Text>
-              </Pressable>
+
+      {showSuggestions ? (
+        <View style={[styles.suggestions, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 6 }}>Recent searches</Text>
+          <View style={styles.wrapRow}>
+            {recentSearches.map((term) => (
+              <Chip key={term} label={term} onPress={() => onChangeQuery(term)} style={{ marginBottom: 6 }} />
             ))}
           </View>
         </View>
       ) : null}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ padding: 12 }}>
+
+      {/* Category chips */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={{ flexGrow: 0 }}>
         {categories.map((c) => (
-          <Pressable key={c.id} onPress={() => setSelectedCategory(c.id)} style={[styles.chip, selectedCategory === c.id && { backgroundColor: COLORS.primary }]}>
-            <Text style={{ fontWeight: '600', color: selectedCategory === c.id ? COLORS.surface : COLORS.text }}>{c.name}</Text>
-          </Pressable>
+          <Chip key={c.id} label={c.name} selected={selectedCategory === c.id} onPress={() => setSelectedCategory(c.id)} />
         ))}
       </ScrollView>
-      <Text style={styles.debug}>renders: {renderCount.current}</Text>
+
+      {/* Sort options */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortRow} style={{ flexGrow: 0 }}>
+        <Ionicons name="swap-vertical" size={16} color={colors.textMuted} style={{ marginRight: 6 }} />
+        {SORT_OPTIONS.map((s) => (
+          <Pressable key={s.key} onPress={() => setSortOrder(s.key)} style={{ marginRight: 14 }}>
+            <Text style={{ color: sortOrder === s.key ? colors.primary : colors.textMuted, fontWeight: sortOrder === s.key ? '800' : '500' }}>
+              {s.label}
+            </Text>
+          </Pressable>
+        ))}
+        <Text style={[styles.debug, { color: colors.textMuted, borderColor: colors.border }]}>renders: {renderCount.current}</Text>
+      </ScrollView>
+
       <FlatList
         ref={listRef}
+        data={visibleItems}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
+        refreshing={refreshing}
+        onRefresh={() => load(true)}
         onScroll={onScroll}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
+        initialNumToRender={8}
         ListEmptyComponent={
-          <View style={styles.center}>
-            <Text style={{ fontSize: 40 }}>🔍</Text>
-            <Text style={{ color: COLORS.text, fontWeight: '700' }}>No dishes found</Text>
-            <Text style={{ color: COLORS.textMuted, textAlign: 'center' }}>Nothing matches “{searchText}”. Try another word or category.</Text>
-          </View>
+          <EmptyState
+            emoji="🔍"
+            title="No dishes found"
+            message={debouncedQuery ? `Nothing on the menu matches “${debouncedQuery}”. Try another word or category.` : 'No items in this category yet.'}
+          />
         }
-        data={filteredItems}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <MenuCard item={item} quantityInCart={quantityById[item.id] || 0} onAdd={(i) => dispatch({ type: ADD_ITEM, payload: i })} />
-        )}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
       />
+
       {showBackToTop ? (
-        <Pressable onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })} style={styles.fab} accessibilityLabel="Back to top">
-          <Ionicons name="arrow-up" size={18} color={COLORS.primaryText} />
-          <Text style={{ color: COLORS.primaryText, fontWeight: '700' }}>Top</Text>
+        <Pressable
+          onPress={scrollToTop}
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          accessibilityLabel="Back to top"
+        >
+          <Ionicons name="arrow-up" size={18} color={colors.primaryText} />
+          <Text style={{ color: colors.primaryText, fontWeight: '700' }}>Top</Text>
         </Pressable>
       ) : null}
-    </View>
+    </Screen>
   );
 }
 
-// Styles depend on the theme, so they are built from the active palette.
-const makeStyles = (COLORS) => StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: COLORS.background },
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginTop: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.border, borderRadius: 999, backgroundColor: COLORS.surface },
-  searchInput: { flex: 1, minHeight: 44, color: COLORS.text },
-  suggestions: { marginHorizontal: 16, marginTop: 8, padding: 12, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, backgroundColor: COLORS.surface },
-  debug: { alignSelf: 'flex-end', marginRight: 16, fontSize: 11, color: COLORS.textMuted },
-  fab: { position: 'absolute', right: 16, bottom: 16, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, elevation: 4 },
-  retry: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  chip: { backgroundColor: COLORS.chip, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, marginRight: 8 },
-  card: { flexDirection: 'row', gap: 12, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, padding: 12, marginBottom: 12 },
-  image: { fontSize: 40, width: 60, textAlign: 'center' },
-  name: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  badge: { alignSelf: 'flex-start', backgroundColor: COLORS.accent, fontSize: 11, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, marginVertical: 2, overflow: 'hidden' },
-  desc: { color: COLORS.textMuted, fontSize: 13 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  price: { fontWeight: '800', color: COLORS.text },
-  add: { backgroundColor: COLORS.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
+const styles = StyleSheet.create({
+  center: { alignItems: 'center', justifyContent: 'center' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.lg, marginTop: spacing.md, paddingHorizontal: spacing.md, borderWidth: 1, borderRadius: radius.pill },
+  searchInput: { flex: 1, minHeight: 44, fontSize: 15 },
+  suggestions: { marginHorizontal: spacing.lg, marginTop: spacing.sm, padding: spacing.md, borderWidth: 1, borderRadius: radius.md },
+  wrapRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  chips: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  sortRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, alignItems: 'center' },
+  debug: { fontSize: 11, borderWidth: 1, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: 96 },
+  fab: { position: 'absolute', right: spacing.lg, bottom: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 12, borderRadius: radius.pill, elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
 });

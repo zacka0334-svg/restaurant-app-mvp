@@ -32,3 +32,10 @@ Automated versions of all of these are in `__tests__/cartReducer.test.js` (run w
 
 The cart has many related values (items, quantities, notes, promo code, discount) and eight different ways they can change. With `useReducer`, every transition lives in one pure, testable function. Screens only `dispatch` intent (`INCREMENT`), and rules like "decrement to zero removes the item" are written once instead of in every button handler. With `useState` the same logic would be scattered across the Menu and Cart screens and would be easy to get out of sync. `useState` would have been enough for a cart that only held a list of item ids with no quantities, notes or promo codes.
 
+
+## Q8: When *not* to use `useMemo` and `useCallback`
+
+Don't use them by default. Each one costs memory and a dependency comparison on every render, and makes code harder to read. Skip `useMemo` for cheap calculations (adding two numbers, filtering a 10-item array) and for values that are only used once in the same component. Skip `useCallback` for handlers passed to plain elements (`<Pressable onPress>`) or to children that are not wrapped in `React.memo`: a stable reference only helps when something compares it. Never use them to "fix" a bug: correctness must not depend on memoisation. Measure first (React DevTools Profiler, console logs). Optimise only where a slow calculation or a large memoised list is actually re-rendering needlessly, as with `MenuItemCard` here.
+
+**How to see the optimisation (screenshots for Q8):** open the Metro terminal or the debugger console. With `React.memo` + `useCallback` in place, tapping one heart logs only one line, e.g. `[MenuItemCard] render: Mutton Biryani`. For the "before" screenshot, temporarily change the last line of `src/components/MenuItemCard.js` to `export default MenuItemCard;` (no memo): now every visible card logs on each tap.
+

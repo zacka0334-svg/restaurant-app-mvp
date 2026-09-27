@@ -123,7 +123,12 @@ export default function CartScreen({ navigation }) {
         <Text style={[styles.total, { color: colors.text }]}>{formatPrice(subtotal)}</Text>
       </View>
 
-      <AppButton title="Clear cart" variant="outline" onPress={confirmClear} />
+      <AppButton
+        title="Review order"
+        onPress={() => navigation.navigate('OrderSummary')}
+        icon={<Ionicons name="receipt-outline" size={18} color={colors.primaryText} />}
+      />
+      <AppButton title="Clear cart" variant="outline" onPress={confirmClear} style={{ marginTop: spacing.sm }} />
     </View>
   );
 

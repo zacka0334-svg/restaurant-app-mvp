@@ -20,7 +20,7 @@ It uses **no backend, no external API and no state-management library**. All dat
 
 | Deliverable | Location |
 |---|---|
-| SRS (Question 1) | [`A1/SRS.pdf`](A1/SRS.pdf) (source: `A1/source/SRS.md`) |
+| SRS (Question 1) | [`A1/SRS.pdf`](A1/SRS.pdf) |
 | UML diagrams (Question 2) | [`A1/UML/`](A1/UML) (PNG) |
 | App source (Questions 3–10) | [`src/`](src) and [`App.js`](App.js) |
 | Reducer tests (Question 7 bonus) | [`__tests__/`](__tests__) |
@@ -83,7 +83,6 @@ restaurant-app-mvp/
 ├── App.js                      # Providers + loading gate + navigator
 ├── A1/
 │   ├── SRS.pdf                 # Question 1
-│   ├── source/SRS.md           # SRS source text
 │   └── UML/                    # Question 2 (PNG diagrams)
 ├── __tests__/                  # Jest tests for cartReducer and pricing
 ├── docs/screenshots/

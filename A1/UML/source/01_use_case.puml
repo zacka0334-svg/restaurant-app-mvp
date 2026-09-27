@@ -1,0 +1,66 @@
+@startuml UseCaseDiagram
+!include common.iuml
+left to right direction
+
+actor "Customer" as C
+actor "Restaurant Manager" as M
+rectangle "Restaurant App (frontend only)" {
+  usecase "Sign Up" as UC1
+  usecase "Log In" as UC2
+  usecase "Validate Credentials" as UCV
+  usecase "Browse Menu" as UC3
+  usecase "Filter by Category" as UC3a
+  usecase "Search Menu" as UC4
+  usecase "Sort Menu" as UC4a
+  usecase "Mark Favourite" as UC5
+  usecase "Manage Cart" as UC6
+  usecase "Add Special Instructions" as UC6a
+  usecase "Place Order" as UC7
+  usecase "Apply Promo Code" as UC8
+  usecase "View Order Summary" as UC9
+  usecase "Choose Dine-in / Takeaway" as UC9a
+  usecase "Track Order" as UC10
+  usecase "Cancel Order" as UC10a
+  usecase "Reserve Table" as UC11
+  usecase "Check Table Availability" as UC11a
+  usecase "Cancel Reservation" as UC12
+  usecase "Manage Profile & Theme" as UC13
+  usecase "Log Out" as UC14
+  usecase "Update Order Status" as UC15
+  usecase "Accept / Decline Reservation" as UC16
+  usecase "Manage Menu Items" as UC17
+  usecase "Toggle Item Availability" as UC17a
+  usecase "Edit Item Price" as UC17b
+}
+C --> UC1
+C --> UC2
+C --> UC3
+C --> UC4
+C --> UC5
+C --> UC6
+C --> UC7
+C --> UC10
+C --> UC11
+C --> UC12
+C --> UC13
+C --> UC14
+M --> UC2
+M --> UC15
+M --> UC16
+M --> UC17
+M --> UC13
+M --> UC14
+UC1 ..> UCV : <<include>>
+UC2 ..> UCV : <<include>>
+UC3 <.. UC3a : <<extend>>
+UC3 <.. UC4a : <<extend>>
+UC7 ..> UC8 : <<include>>
+UC7 ..> UC9 : <<include>>
+UC7 ..> UC9a : <<include>>
+UC6 <.. UC6a : <<extend>>
+UC10 <.. UC10a : <<extend>>
+UC11 ..> UC11a : <<include>>
+UC17 <.. UC17a : <<extend>>
+UC17 <.. UC17b : <<extend>>
+note right of UC8 : Promo step always runs;\nan empty code means no discount.
+@enduml

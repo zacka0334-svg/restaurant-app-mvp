@@ -1,0 +1,17 @@
+!pragma layout smetana
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam ArrowColor #444444
+skinparam usecaseBackgroundColor #FFF4EC
+skinparam usecaseBorderColor #D9480F
+skinparam classBackgroundColor #FFF8F2
+skinparam classBorderColor #D9480F
+skinparam classHeaderBackgroundColor #FFE3D3
+skinparam componentBackgroundColor #FFF8F2
+skinparam componentBorderColor #D9480F
+skinparam stateBackgroundColor #FFF4EC
+skinparam stateBorderColor #D9480F
+skinparam sequenceParticipantBackgroundColor #FFF4EC
+skinparam sequenceParticipantBorderColor #D9480F
+skinparam packageBorderColor #999999

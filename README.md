@@ -1,6 +1,20 @@
-# 🍛 Dastarkhwan: Restaurant App MVP (React Native, frontend only)
+# 🍛 Dastarkhwan: Restaurant App MVP
 
-Assignment 1, Fall 2026. This is a working React Native (Expo) prototype of a restaurant app. Diners can browse the menu, search and sort it, fill a cart, apply promo codes, place dine-in or takeaway orders, book tables and track their orders. Managers can run incoming orders, reservations and the menu from a dashboard.
+**Name:** Sikander Hayat  
+**Reg No:** 9315  
+**Assignment:** 1, Restaurant App MVP (frontend only, React Native), Fall 2026
+
+A React Native (Expo) prototype of a restaurant app. Diners can browse the menu, search and sort it, fill a cart, apply promo codes, place dine-in or takeaway orders, book tables and track their orders. Managers can run incoming orders, reservations and the menu from a dashboard.
+
+**▶️ Demo video (2 min):** [docs/demo-video.mp4](docs/demo-video.mp4)
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/02-menu.jpg" width="200"><br><b>Menu</b></td>
+    <td align="center"><img src="docs/screenshots/06-order-tracking.jpg" width="200"><br><b>Order tracking</b></td>
+    <td align="center"><img src="docs/screenshots/08-manager-orders.jpg" width="200"><br><b>Manager dashboard</b></td>
+  </tr>
+</table>
 
 It uses **no backend, no external API and no state-management library**. All data comes from mock files in `src/data`, lives in React state (Context + `useReducer`) and is saved to AsyncStorage.
 
@@ -11,7 +25,7 @@ It uses **no backend, no external API and no state-management library**. All dat
 | App source (Questions 3–10) | [`src/`](src) and [`App.js`](App.js) |
 | Reducer tests (Question 7 bonus) | [`__tests__/`](__tests__) |
 | Screenshots | [`docs/screenshots/`](docs/screenshots) |
-| Demo video | **ADD YOUR LINK HERE** (max 3 minutes) |
+| Demo video | [`docs/demo-video.mp4`](docs/demo-video.mp4) |
 
 ---
 
@@ -162,32 +176,36 @@ Don't use them by default. Each one costs memory and a dependency comparison on 
 5. On Order Tracking: watch Pending → Preparing (10 s) → Ready (20 s) → Served (30 s).
 6. Place a second order, then open Reserve: pick tomorrow, see that 20:00 is disabled, book 19:00, confirm in the modal, and see the booking under My reservations.
 7. Open Profile: toggle dark mode, then log out.
-8. Log in as `manager@dastarkhwan.pk`: on Incoming Orders, move the customer's order forward; on Reservations, accept the booking; on Menu, add an item, edit a price and switch a dish to unavailable.
+8. Log in as `manager@dastarkhwan.pk`: on Orders, move the customer's order forward; on Bookings, accept the booking; on Menu, add an item, edit a price and switch a dish to unavailable.
 9. Log back in as the customer: the menu change is visible immediately and the order shows the manager's status. Close and reopen the app: the data is still there (AsyncStorage).
 
 ## 7. Screenshots
 
-Put the images in `docs/screenshots/` with these names so the links below work:
+All screenshots are from the app running on an Android phone in Expo Go.
 
-| Question | What to capture | File |
-|---|---|---|
-| Q3 | Login with validation errors visible | `q3-validation-errors.png` |
-| Q3 | Successful login (Menu or Dashboard) | `q3-login-success.png` |
-| Q5 | Render counter after typing a search | `q5-render-counter.png` |
-| Q8 | Console **before** memo (all cards log) | `q8-console-before.png` |
-| Q8 | Console **after** memo (one card logs) | `q8-console-after.png` |
-| Q9 | Disabled time slot (tomorrow 20:00) | `q9-disabled-slot.png` |
-| Q10 | Order tracking / Manager dashboard | `q10-tracking.png`, `q10-dashboard.png` |
-
-![Validation errors](docs/screenshots/q3-validation-errors.png)
-![Login success](docs/screenshots/q3-login-success.png)
-![Render counter](docs/screenshots/q5-render-counter.png)
-![Console before](docs/screenshots/q8-console-before.png)
-![Console after](docs/screenshots/q8-console-after.png)
-![Disabled slot](docs/screenshots/q9-disabled-slot.png)
-![Tracking](docs/screenshots/q10-tracking.png)
-![Dashboard](docs/screenshots/q10-dashboard.png)
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/01-login-error.jpg" width="200"><br><b>Q3</b> Login error alert</td>
+    <td align="center"><img src="docs/screenshots/02-menu.jpg" width="200"><br><b>Q4</b> Menu, specials, header count</td>
+    <td align="center"><img src="docs/screenshots/03-search-karahi.jpg" width="200"><br><b>Q5</b> Debounced search</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/04-search-typing.jpg" width="200"><br><b>Q5</b> Search input focused</td>
+    <td align="center"><img src="docs/screenshots/05-reservation-disabled-slot.jpg" width="200"><br><b>Q9</b> Disabled slot (20:00 Full)</td>
+    <td align="center"><img src="docs/screenshots/06-order-tracking.jpg" width="200"><br><b>Q10</b> Order tracking</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/07-my-orders.jpg" width="200"><br><b>Q10</b> My orders</td>
+    <td align="center"><img src="docs/screenshots/08-manager-orders.jpg" width="200"><br><b>Q10</b> Manager: orders</td>
+    <td align="center"><img src="docs/screenshots/09-manager-bookings.jpg" width="200"><br><b>Q10</b> Manager: bookings</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/10-manager-menu.jpg" width="200"><br><b>Q10</b> Manager: menu management</td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
 
 ## 8. Demo video
 
-▶️ **Demo (≤ 3 min):** _add your YouTube / Google Drive link here_
+▶️ [docs/demo-video.mp4](docs/demo-video.mp4) (about 2 minutes). It shows the complete flow: customer login, menu and search, cart and promo code, placing and tracking an order, table reservation, and the manager updating the order.

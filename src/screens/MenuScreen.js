@@ -188,8 +188,15 @@ export default function MenuScreen({ navigation }) {
     <Screen>
       {/* Greeting */}
       <View style={styles.greeting}>
-        <Text style={{ color: colors.textMuted, fontSize: 13 }}>Assalam o Alaikum{user ? `, ${user.fullName.split(' ')[0]}` : ''} 👋</Text>
-        <Text style={[styles.greetingTitle, { color: colors.text }]}>What are you craving today?</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>Assalam o Alaikum{user ? `, ${user.fullName.split(' ')[0]}` : ''} 👋</Text>
+          <Text style={[styles.greetingTitle, { color: colors.text }]}>What are you craving today?</Text>
+        </View>
+        {/* Q5 debug label: how many times MenuScreen has rendered */}
+        <View style={[styles.debug, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+          <Text style={{ color: colors.textMuted, fontSize: 10 }}>renders</Text>
+          <Text style={{ color: colors.primary, fontSize: 15, fontWeight: '900' }}>{renderCount.current}</Text>
+        </View>
       </View>
 
       {/* Search bar */}
@@ -244,7 +251,6 @@ export default function MenuScreen({ navigation }) {
             </Text>
           </Pressable>
         ))}
-        <Text style={[styles.debug, { color: colors.textMuted, borderColor: colors.border }]}>renders: {renderCount.current}</Text>
       </ScrollView>
 
       <FlatList
@@ -284,7 +290,7 @@ export default function MenuScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
-  greeting: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  greeting: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   greetingTitle: { fontSize: 20, fontWeight: '900', marginTop: 2 },
   searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.lg, marginTop: spacing.md, paddingHorizontal: spacing.md, borderWidth: 1, borderRadius: radius.pill },
   searchInput: { flex: 1, minHeight: 44, fontSize: 15 },
@@ -292,7 +298,7 @@ const styles = StyleSheet.create({
   wrapRow: { flexDirection: 'row', flexWrap: 'wrap' },
   chips: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   sortRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, alignItems: 'center' },
-  debug: { fontSize: 11, borderWidth: 1, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  debug: { alignItems: 'center', borderWidth: 1, borderRadius: radius.md, paddingHorizontal: 8, paddingVertical: 4, marginLeft: spacing.sm },
   list: { paddingHorizontal: spacing.lg, paddingBottom: 96 },
   fab: { position: 'absolute', right: spacing.lg, bottom: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 12, borderRadius: radius.pill, elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
 });

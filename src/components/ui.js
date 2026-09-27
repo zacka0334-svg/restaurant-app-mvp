@@ -84,6 +84,7 @@ export function Chip({ label, selected, onPress, disabled, style }) {
       ]}
     >
       <Text
+        numberOfLines={1}
         style={{
           color: selected ? colors.primaryText : disabled ? colors.textMuted : colors.text,
           fontWeight: '600',

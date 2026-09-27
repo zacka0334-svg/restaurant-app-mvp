@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useOrders } from '../context/OrdersContext';
 import { useReservations } from '../context/ReservationsContext';
@@ -15,8 +16,8 @@ import { radius, spacing } from '../theme/colors';
 import { formatPrice } from '../utils/pricing';
 
 const TABS = [
-  { key: 'orders', label: 'Incoming Orders' },
-  { key: 'reservations', label: 'Reservations' },
+  { key: 'orders', label: 'Orders' },
+  { key: 'reservations', label: 'Bookings' },
   { key: 'menu', label: 'Menu' },
 ];
 
@@ -239,8 +240,31 @@ export default function ManagerDashboardScreen() {
   const pendingRes = reservations.filter((r) => r.status === 'Pending').length;
   const counts = { orders: activeOrders, reservations: pendingRes, menu: null };
 
+  // Today's takings from orders that were not cancelled (derived, not stored).
+  const todayRevenue = useMemo(() => {
+    const today = new Date().toDateString();
+    return orders
+      .filter((o) => o.status !== CANCELLED && new Date(o.timestamp).toDateString() === today)
+      .reduce((sum, o) => sum + o.total, 0);
+  }, [orders]);
+
+  const stats = [
+    { label: 'Active orders', value: String(activeOrders), icon: 'flame-outline' },
+    { label: 'New bookings', value: String(pendingRes), icon: 'calendar-outline' },
+    { label: "Today's sales", value: formatPrice(todayRevenue), icon: 'cash-outline' },
+  ];
+
   return (
     <Screen>
+      <View style={styles.stats}>
+        {stats.map((s) => (
+          <View key={s.label} style={[styles.stat, { backgroundColor: colors.hero }]}>
+            <Ionicons name={s.icon} size={18} color={colors.accent} />
+            <Text style={[styles.statValue, { color: colors.heroText }]} numberOfLines={1} adjustsFontSizeToFit>{s.value}</Text>
+            <Text style={[styles.statLabel, { color: colors.heroText }]} numberOfLines={1}>{s.label}</Text>
+          </View>
+        ))}
+      </View>
       <View style={[styles.tabs, { backgroundColor: colors.surfaceAlt }]}>
         {TABS.map((t) => (
           <Pressable key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && { backgroundColor: colors.primary }]}>
@@ -257,6 +281,10 @@ export default function ManagerDashboardScreen() {
 
 const styles = StyleSheet.create({
   pad: { padding: spacing.lg, paddingBottom: spacing.xl * 2 },
+  stats: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
+  stat: { flex: 1, borderRadius: radius.lg, padding: spacing.md, gap: 2 },
+  statValue: { fontSize: 18, fontWeight: '900' },
+  statLabel: { fontSize: 11, opacity: 0.85 },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },

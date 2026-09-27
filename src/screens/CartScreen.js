@@ -3,12 +3,23 @@ import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, Vi
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
+import { mockTables } from '../data/tables';
 import {
   APPLY_PROMO, CLEAR_CART, DECREMENT, INCREMENT, REMOVE_ITEM, REMOVE_PROMO, UPDATE_NOTE, isValidPromo,
 } from '../reducers/cartReducer';
-import { AppButton, Card, EmptyState, Field, Screen, SectionTitle } from '../components/ui';
+import { AppButton, Card, Chip, EmptyState, Field, Screen, SectionTitle } from '../components/ui';
 import { radius, spacing } from '../theme/colors';
 import { formatPrice } from '../utils/pricing';
+
+function buildPickupTimes() {
+  // Next four 15-minute pickup windows, starting at least 20 minutes from now.
+  const start = new Date(Date.now() + 20 * 60 * 1000);
+  start.setMinutes(Math.ceil(start.getMinutes() / 15) * 15, 0, 0);
+  return Array.from({ length: 4 }, (_, i) => {
+    const d = new Date(start.getTime() + i * 15 * 60 * 1000);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  });
+}
 
 export default function CartScreen({ navigation }) {
   const { colors } = useTheme();
@@ -17,6 +28,11 @@ export default function CartScreen({ navigation }) {
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
 
+  // Q10: order type chosen with useState on the Cart screen.
+  const [orderType, setOrderType] = useState('Dine-in'); // 'Dine-in' | 'Takeaway'
+  const [tableId, setTableId] = useState(null);
+  const [pickupTime, setPickupTime] = useState(null);
+  const pickupTimes = useMemo(buildPickupTimes, []);
 
   const subtotal = useMemo(() => state.items.reduce((s, i) => s + i.price * i.quantity, 0), [state.items]);
 
@@ -32,6 +48,18 @@ export default function CartScreen({ navigation }) {
     dispatch({ type: APPLY_PROMO, payload: { code: promoInput } });
     setPromoError('');
     setPromoInput('');
+  };
+
+  const checkout = () => {
+    if (orderType === 'Dine-in' && !tableId) {
+      Alert.alert('Choose a table', 'Please pick the table you are sitting at (or will sit at).');
+      return;
+    }
+    if (orderType === 'Takeaway' && !pickupTime) {
+      Alert.alert('Choose a pickup time', 'Please pick when you will collect your order.');
+      return;
+    }
+    navigation.navigate('OrderSummary', { orderType, tableId, pickupTime });
   };
 
   const confirmClear = () =>
@@ -118,16 +146,40 @@ export default function CartScreen({ navigation }) {
         </View>
       )}
 
+      {/* Order type */}
+      <SectionTitle>How would you like it?</SectionTitle>
+      <View style={styles.row}>
+        {['Dine-in', 'Takeaway'].map((t) => (
+          <Chip key={t} label={t === 'Dine-in' ? '🍽️ Dine-in' : '🛍️ Takeaway'} selected={orderType === t} onPress={() => setOrderType(t)} />
+        ))}
+      </View>
+
+      {orderType === 'Dine-in' ? (
+        <>
+          <Text style={[styles.hint, { color: colors.textMuted }]}>Select your table</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {mockTables.map((t) => (
+              <Chip key={t.id} label={`T${t.number} · ${t.seats} seats`} selected={tableId === t.id} onPress={() => setTableId(t.id)} />
+            ))}
+          </ScrollView>
+        </>
+      ) : (
+        <>
+          <Text style={[styles.hint, { color: colors.textMuted }]}>Pickup time</Text>
+          <View style={styles.row}>
+            {pickupTimes.map((t) => (
+              <Chip key={t} label={t} selected={pickupTime === t} onPress={() => setPickupTime(t)} />
+            ))}
+          </View>
+        </>
+      )}
+
       <View style={[styles.totalRow, { borderColor: colors.border }]}>
         <Text style={{ color: colors.textMuted }}>{itemCount} item(s) · subtotal</Text>
         <Text style={[styles.total, { color: colors.text }]}>{formatPrice(subtotal)}</Text>
       </View>
 
-      <AppButton
-        title="Review order"
-        onPress={() => navigation.navigate('OrderSummary')}
-        icon={<Ionicons name="receipt-outline" size={18} color={colors.primaryText} />}
-      />
+      <AppButton title="Review order" onPress={checkout} icon={<Ionicons name="receipt-outline" size={18} color={colors.primaryText} />} />
       <AppButton title="Clear cart" variant="outline" onPress={confirmClear} style={{ marginTop: spacing.sm }} />
     </View>
   );
@@ -156,6 +208,8 @@ const styles = StyleSheet.create({
   note: { marginTop: spacing.sm, borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing.md, minHeight: 40 },
   promoRow: { flexDirection: 'row', alignItems: 'flex-start' },
   promoApplied: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: spacing.md, borderRadius: radius.md },
+  row: { flexDirection: 'row', flexWrap: 'wrap' },
+  hint: { marginTop: spacing.md, marginBottom: spacing.sm, fontWeight: '600' },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, marginTop: spacing.lg, paddingVertical: spacing.md },
   total: { fontSize: 20, fontWeight: '900' },
 });

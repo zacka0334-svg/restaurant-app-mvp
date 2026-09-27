@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, T
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
+import { useMenu } from '../context/MenuContext';
 import { ADD_ITEM } from '../reducers/cartReducer';
 import { categories, fetchMenu } from '../data/menu';
 import useDebounce from '../hooks/useDebounce';
@@ -21,10 +22,10 @@ const MAX_RECENT = 5;
 
 export default function MenuScreen({ navigation }) {
   const { colors } = useTheme();
+  const { menuItems } = useMenu(); // shared with the Manager Dashboard (Q10)
   const { state: cart, dispatch } = useCart();
 
-  // ---- Q4: data, loading / error / refresh state ---------------------------
-  const [menuItems, setMenuItems] = useState([]);
+  // ---- Q4: loading / error / refresh state --------------------------------
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -55,7 +56,9 @@ export default function MenuScreen({ navigation }) {
   const renderCount = useRef(0);
   renderCount.current += 1;
 
-  // Simulated fetch (1.5 s). Used on mount, by Retry and by pull-to-refresh.
+  // Simulated fetch. The data itself now lives in MenuContext so that manager
+  // edits appear here instantly; this request models the network round trip
+  // (loading spinner, error + Retry, pull-to-refresh).
   const load = useCallback(
     (asRefresh = false) => {
       requestRef.current?.cancel();
@@ -63,20 +66,17 @@ export default function MenuScreen({ navigation }) {
       else setIsLoading(true);
       setError(null);
 
-      const request = fetchMenu();
+      const request = fetchMenu(menuItems);
       requestRef.current = request;
       request.promise
-        .then((data) => {
-          setMenuItems(data);
-          setError(null);
-        })
+        .then(() => setError(null))
         .catch((err) => setError(err.message))
         .finally(() => {
           setIsLoading(false);
           setRefreshing(false);
         });
     },
-    []
+    [menuItems]
   );
 
   // Q4: runs once on mount. The cleanup clears the timer so no state update

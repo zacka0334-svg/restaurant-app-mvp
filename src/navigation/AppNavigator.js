@@ -12,6 +12,8 @@ import LoginScreen from '../screens/LoginScreen';
 import MenuScreen from '../screens/MenuScreen';
 import CartScreen from '../screens/CartScreen';
 import OrderSummaryScreen from '../screens/OrderSummaryScreen';
+import OrderTrackingScreen from '../screens/OrderTrackingScreen';
+import MyOrdersScreen from '../screens/MyOrdersScreen';
 import ReservationScreen from '../screens/ReservationScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ManagerDashboardScreen from '../screens/ManagerDashboardScreen';
@@ -21,6 +23,7 @@ const Tab = createBottomTabNavigator();
 const MenuStack = createNativeStackNavigator();
 const CartStack = createNativeStackNavigator();
 const ReserveStack = createNativeStackNavigator();
+const OrdersStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 const DashboardStack = createNativeStackNavigator();
 
@@ -53,6 +56,7 @@ function CartStackScreen() {
     <CartStack.Navigator screenOptions={options}>
       <CartStack.Screen name="Cart" component={CartScreen} options={{ title: 'Your cart' }} />
       <CartStack.Screen name="OrderSummary" component={OrderSummaryScreen} options={{ title: 'Order summary' }} />
+      <CartStack.Screen name="OrderTracking" component={OrderTrackingScreen} options={{ title: 'Track order' }} />
     </CartStack.Navigator>
   );
 }
@@ -63,6 +67,16 @@ function ReserveStackScreen() {
     <ReserveStack.Navigator screenOptions={options}>
       <ReserveStack.Screen name="Reservation" component={ReservationScreen} options={{ title: 'Book a table' }} />
     </ReserveStack.Navigator>
+  );
+}
+
+function OrdersStackScreen() {
+  const options = useStackOptions();
+  return (
+    <OrdersStack.Navigator screenOptions={options}>
+      <OrdersStack.Screen name="MyOrders" component={MyOrdersScreen} options={{ title: 'My orders' }} />
+      <OrdersStack.Screen name="OrderTracking" component={OrderTrackingScreen} options={{ title: 'Track order' }} />
+    </OrdersStack.Navigator>
   );
 }
 
@@ -88,6 +102,7 @@ const TAB_ICONS = {
   MenuTab: 'restaurant',
   CartTab: 'cart',
   ReserveTab: 'calendar',
+  OrdersTab: 'receipt',
   DashboardTab: 'speedometer',
   ProfileTab: 'person',
 };
@@ -127,6 +142,7 @@ function MainTabs() {
             }}
           />
           <Tab.Screen name="ReserveTab" component={ReserveStackScreen} options={{ title: 'Reserve' }} />
+          <Tab.Screen name="OrdersTab" component={OrdersStackScreen} options={{ title: 'Orders' }} />
         </>
       )}
       <Tab.Screen name="ProfileTab" component={ProfileStackScreen} options={{ title: 'Profile' }} />

@@ -1,12 +1,24 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import seedUsers from '../data/users';
+import usePersistentReducer from '../hooks/usePersistentReducer';
 
 const AuthContext = createContext(undefined);
 
+// Registered users (seeded from src/data/users.js, sign-ups are appended).
+function usersReducer(state, action) {
+  switch (action.type) {
+    case 'HYDRATE':
+      return Array.isArray(action.payload) ? action.payload : state;
+    case 'ADD_USER':
+      return [...state, action.payload];
+    default:
+      return state;
+  }
+}
+
 export function AuthProvider({ children }) {
-  // Registered users (seeded from src/data/users.js, sign-ups are appended).
-  const [users, setUsers] = useState(seedUsers);
-  // The logged-in user lives here instead of in LoginScreen's local state.
+  const [users, dispatchUsers, isHydrated] = usePersistentReducer(usersReducer, seedUsers, '@rapp/users');
+  // The logged-in user lives here instead of in LoginScreen's local state (Q6).
   const [user, setUser] = useState(null);
 
   const login = useCallback((loggedInUser) => {
@@ -17,6 +29,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => setUser(null), []);
 
+  // Mock "API" helpers used by the Login/Signup screen.
   const findUser = useCallback(
     (email, password) =>
       users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password) || null,
@@ -28,15 +41,18 @@ export function AuthProvider({ children }) {
     [users]
   );
 
-  const signup = useCallback(({ fullName, email, password, role }) => {
-    const newUser = { id: `u${Date.now()}`, fullName: fullName.trim(), email: email.trim().toLowerCase(), password, role };
-    setUsers((prev) => [...prev, newUser]);
-    return newUser;
-  }, []);
+  const signup = useCallback(
+    ({ fullName, email, password, role }) => {
+      const newUser = { id: `u${Date.now()}`, fullName: fullName.trim(), email: email.trim().toLowerCase(), password, role };
+      dispatchUsers({ type: 'ADD_USER', payload: newUser });
+      return newUser;
+    },
+    [dispatchUsers]
+  );
 
   const value = useMemo(
-    () => ({ user, login, logout, findUser, emailExists, signup }),
-    [user, login, logout, findUser, emailExists, signup]
+    () => ({ user, login, logout, findUser, emailExists, signup, isHydrated }),
+    [user, login, logout, findUser, emailExists, signup, isHydrated]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

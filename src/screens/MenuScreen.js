@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { ADD_ITEM } from '../reducers/cartReducer';
 import { categories, fetchMenu } from '../data/menu';
+import useDebounce from '../hooks/useDebounce';
 import MenuItemCard from '../components/MenuItemCard';
 import { AppButton, Chip, EmptyState, Screen } from '../components/ui';
 import { radius, spacing } from '../theme/colors';
@@ -36,8 +37,7 @@ export default function MenuScreen({ navigation }) {
 
   // ---- Q5/Q9: search --------------------------------------------------------
   const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState(''); // applied after 400 ms
-  const debounceRef = useRef(null); // timeout id survives re-renders without causing one
+  const debouncedQuery = useDebounce(query, 400); // Q9 replaces the manual ref debounce
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
   const searchInputRef = useRef(null);
@@ -86,17 +86,6 @@ export default function MenuScreen({ navigation }) {
     return () => requestRef.current?.cancel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Q5: manual debounce. Every keystroke clears the pending timeout; the
-  // search is applied after 400 ms of inactivity.
-  const onChangeQuery = (text) => {
-    setQuery(text);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedQuery(text), 400);
-  };
-
-  // Clear the pending debounce timer on unmount.
-  useEffect(() => () => clearTimeout(debounceRef.current), []);
 
   // Q5: remember the last five distinct searches. The previous query is kept
   // in a ref so the same term typed twice in a row is not added again.
@@ -160,9 +149,7 @@ export default function MenuScreen({ navigation }) {
   const keyExtractor = useCallback((item) => item.id, []);
 
   const clearSearch = () => {
-    clearTimeout(debounceRef.current);
     setQuery('');
-    setDebouncedQuery('');
     searchInputRef.current?.focus(); // keep focus after clearing
   };
 
@@ -205,7 +192,7 @@ export default function MenuScreen({ navigation }) {
         <TextInput
           ref={searchInputRef}
           value={query}
-          onChangeText={onChangeQuery}
+          onChangeText={setQuery}
           onFocus={() => setIsSearchFocused(true)}
           onBlur={() => setIsSearchFocused(false)}
           placeholder="Search dishes, e.g. karahi"
@@ -226,7 +213,7 @@ export default function MenuScreen({ navigation }) {
           <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 6 }}>Recent searches</Text>
           <View style={styles.wrapRow}>
             {recentSearches.map((term) => (
-              <Chip key={term} label={term} onPress={() => onChangeQuery(term)} style={{ marginBottom: 6 }} />
+              <Chip key={term} label={term} onPress={() => setQuery(term)} style={{ marginBottom: 6 }} />
             ))}
           </View>
         </View>

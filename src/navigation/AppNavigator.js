@@ -12,6 +12,7 @@ import LoginScreen from '../screens/LoginScreen';
 import MenuScreen from '../screens/MenuScreen';
 import CartScreen from '../screens/CartScreen';
 import OrderSummaryScreen from '../screens/OrderSummaryScreen';
+import ReservationScreen from '../screens/ReservationScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ManagerDashboardScreen from '../screens/ManagerDashboardScreen';
 
@@ -19,6 +20,7 @@ const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const MenuStack = createNativeStackNavigator();
 const CartStack = createNativeStackNavigator();
+const ReserveStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 const DashboardStack = createNativeStackNavigator();
 
@@ -55,6 +57,15 @@ function CartStackScreen() {
   );
 }
 
+function ReserveStackScreen() {
+  const options = useStackOptions();
+  return (
+    <ReserveStack.Navigator screenOptions={options}>
+      <ReserveStack.Screen name="Reservation" component={ReservationScreen} options={{ title: 'Book a table' }} />
+    </ReserveStack.Navigator>
+  );
+}
+
 function ProfileStackScreen() {
   const options = useStackOptions();
   return (
@@ -76,6 +87,7 @@ function DashboardStackScreen() {
 const TAB_ICONS = {
   MenuTab: 'restaurant',
   CartTab: 'cart',
+  ReserveTab: 'calendar',
   DashboardTab: 'speedometer',
   ProfileTab: 'person',
 };
@@ -114,6 +126,7 @@ function MainTabs() {
               tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.primaryText },
             }}
           />
+          <Tab.Screen name="ReserveTab" component={ReserveStackScreen} options={{ title: 'Reserve' }} />
         </>
       )}
       <Tab.Screen name="ProfileTab" component={ProfileStackScreen} options={{ title: 'Profile' }} />

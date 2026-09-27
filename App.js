@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { CartProvider } from './src/context/CartContext';
+import { ReservationsProvider } from './src/context/ReservationsContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 function ThemedStatusBar() {
@@ -16,10 +17,12 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <CartProvider>
-            <ThemedStatusBar />
-            <AppNavigator />
-          </CartProvider>
+          <ReservationsProvider>
+            <CartProvider>
+              <ThemedStatusBar />
+              <AppNavigator />
+            </CartProvider>
+          </ReservationsProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

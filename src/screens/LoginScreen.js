@@ -3,6 +3,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import useForm from '../hooks/useForm';
 import { AppButton, Field, Screen } from '../components/ui';
 import { radius, spacing } from '../theme/colors';
 
@@ -29,6 +30,8 @@ export function validateAuth(values, mode) {
   }
   return errors;
 }
+const validateLogin = (v) => validateAuth(v, 'login');
+const validateSignup = (v) => validateAuth(v, 'signup');
 
 export default function LoginScreen({ navigation }) {
   const { colors } = useTheme();
@@ -39,26 +42,11 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form values and errors (local state for now).
-  const [values, setValues] = useState(INITIAL_VALUES);
-  const [errors, setErrors] = useState({});
-
-  // Editing a field clears that field's error immediately.
-  const handleChange = (field) => (value) => {
-    setValues((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors(({ [field]: _removed, ...rest }) => rest);
-  };
-
-  const handleSubmit = (onValid) => {
-    const nextErrors = validateAuth(values, mode);
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) onValid(values);
-  };
-
-  const reset = () => {
-    setValues(INITIAL_VALUES);
-    setErrors({});
-  };
+  // Q9: form values + errors now come from the reusable useForm hook.
+  const { values, errors, handleChange, handleSubmit, reset } = useForm(
+    INITIAL_VALUES,
+    mode === 'login' ? validateLogin : validateSignup
+  );
 
   const isSignup = mode === 'signup';
 

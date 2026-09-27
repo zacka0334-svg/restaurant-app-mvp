@@ -230,7 +230,7 @@ No database is used. The data sets below are JavaScript modules in `src/data/` (
 
 # 6. UML Diagrams
 
-All diagrams were produced with PlantUML; the sources are in `A1/UML/source` and the exported PNG files in `A1/UML`.
+All diagrams were produced with PlantUML and exported as PNG files to `A1/UML`.
 
 ## 6.1 Use Case Diagram
 

@@ -12,8 +12,8 @@ subtitle: "Restaurant App MVP (Frontend Only, React Native) — Assignment 1, Fa
 | **Release covered** | MVP v1.0.0 (frontend prototype) |
 | **Platform** | React Native with Expo SDK 57 (Android, iOS, Expo Go) |
 | **Repository** | github.com/zacka0334-svg/restaurant-app-mvp |
-| **Student name** | ______________________ |
-| **Roll number** | ______________________ |
+| **Student name** | Sikander Hayat |
+| **Registration no.** | 9315 |
 | **Date** | September 2026 |
 
 </div>

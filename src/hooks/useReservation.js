@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useReservations } from '../context/ReservationsContext';
-import { TIME_SLOTS, mockTables, toDateKey } from '../data/tables';
-import { CANCEL_RESERVATION, CREATE_RESERVATION, isActiveReservation } from '../reducers/reservationsReducer';
+import { api } from '../api/client';
+import useApi from './useApi';
+import { TIME_SLOTS, toDateKey } from '../utils/dates';
 
 export const MIN_PARTY = 1;
 export const MAX_PARTY = 12;
@@ -16,15 +16,12 @@ export function toDateTime(dateKey, time) {
   return new Date(y, m - 1, d, hh, mm, 0, 0);
 }
 
-// Tables that can seat `partySize` and are not booked at date+time.
-export function getFreeTables(reservations, tables, dateKey, time, partySize) {
-  const booked = new Set(
-    reservations
-      .filter((r) => r.date === dateKey && r.time === time && isActiveReservation(r))
-      .map((r) => r.tableId)
-  );
+// Tables that can seat `partySize` and are not booked at `time`.
+// `booked` comes from GET /api/reservations/availability: [{ table, time }]
+export function getFreeTables(booked, tables, time, partySize) {
+  const taken = new Set(booked.filter((b) => b.time === time).map((b) => String(b.table)));
   return tables
-    .filter((t) => t.seats >= partySize && !booked.has(t.id))
+    .filter((t) => t.seats >= partySize && !taken.has(String(t.id)))
     .sort((a, b) => a.seats - b.seats); // best fit first
 }
 
@@ -69,10 +66,20 @@ function buildDates(days = 7) {
 // All reservation business logic lives here; ReservationScreen only renders.
 export default function useReservation() {
   const { user } = useAuth();
-  const { reservations, dispatch } = useReservations();
 
   const dates = useMemo(() => buildDates(7), []);
   const [date, setDate] = useState(dates[1].key); // default: tomorrow
+
+  // A2: everything comes from the server now.
+  const tablesApi = useApi('/tables', { initialData: [] }); // GET /api/tables
+  const availabilityApi = useApi(`/reservations/availability?date=${date}`, { initialData: [] }); // booked slots for the day
+  const myApi = useApi('/reservations/my', { initialData: [] }); // GET /api/reservations/my
+  const { refetch: refetchTables } = tablesApi;
+  const { refetch: refetchAvailability } = availabilityApi;
+  const { refetch: refetchMine } = myApi;
+  const tables = tablesApi.data || [];
+  const booked = availabilityApi.data || [];
+  const [isSaving, setIsSaving] = useState(false);
   const [time, setTime] = useState(null);
   const [partySize, setPartySizeState] = useState(2);
   const [selectedTableId, setSelectedTableId] = useState(null);
@@ -103,17 +110,17 @@ export default function useReservation() {
     const now = Date.now();
     return TIME_SLOTS.map((slot) => {
       const tooSoon = toDateTime(date, slot).getTime() - now < ONE_HOUR;
-      const free = getFreeTables(reservations, mockTables, date, slot, partySize);
+      const free = getFreeTables(booked, tables, slot, partySize);
       let reason = null;
       if (tooSoon) reason = 'Too soon';
       else if (free.length === 0) reason = 'Full';
       return { time: slot, isAvailable: !reason, reason, freeCount: free.length };
     });
-  }, [date, partySize, reservations]);
+  }, [date, partySize, booked, tables]);
 
   const availableTables = useMemo(
-    () => (time ? getFreeTables(reservations, mockTables, date, time, partySize) : []),
-    [reservations, date, time, partySize]
+    () => (time ? getFreeTables(booked, tables, time, partySize) : []),
+    [booked, tables, time, partySize]
   );
 
   // Derived: the chosen table if still valid, otherwise the best-fit table.
@@ -133,35 +140,53 @@ export default function useReservation() {
     return Object.keys(next).length === 0;
   }, [date, effectiveTime, partySize, contact, selectedTable]);
 
-  const createReservation = useCallback(() => {
+  // POST /api/reservations. The app validated already (quick feedback),
+  // but the server checks again and may answer 409 if someone else just
+  // booked the same table. Throws an Error with the server's message.
+  const createReservation = useCallback(async () => {
     if (!validate()) return null;
-    const reservation = {
-      id: `RES-${String(Date.now()).slice(-6)}`,
-      customerId: user.id,
-      name: contact.name.trim(),
-      phone: contact.phone,
-      date,
-      time: effectiveTime,
-      partySize,
-      tableId: selectedTable.id,
-      status: 'Pending',
-      createdAt: Date.now(),
-    };
-    dispatch({ type: CREATE_RESERVATION, payload: reservation });
-    setTime(null);
-    setSelectedTableId(null);
-    return reservation;
-  }, [validate, user, contact, date, effectiveTime, partySize, selectedTable, dispatch]);
+    setIsSaving(true);
+    try {
+      const reservation = await api('/reservations', {
+        method: 'POST',
+        body: {
+          tableId: selectedTable.id,
+          date,
+          time: effectiveTime,
+          partySize,
+          name: contact.name.trim(),
+          phone: contact.phone,
+        },
+      });
+      setTime(null);
+      setSelectedTableId(null);
+      return reservation;
+    } finally {
+      setIsSaving(false);
+      refetchAvailability({ silent: true });
+      refetchMine({ silent: true });
+    }
+  }, [validate, contact, date, effectiveTime, partySize, selectedTable, refetchAvailability, refetchMine]);
 
-  const cancelReservation = useCallback((id) => dispatch({ type: CANCEL_RESERVATION, payload: { id } }), [dispatch]);
-
-  const myReservations = useMemo(
-    () =>
-      reservations
-        .filter((r) => user && r.customerId === user.id)
-        .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1)),
-    [reservations, user]
+  // PATCH /api/reservations/:id/cancel
+  const cancelReservation = useCallback(
+    async (id) => {
+      await api(`/reservations/${id}/cancel`, { method: 'PATCH' });
+      refetchAvailability({ silent: true });
+      refetchMine({ silent: true });
+    },
+    [refetchAvailability, refetchMine]
   );
+
+  const refresh = useCallback(() => {
+    refetchTables({ silent: true });
+    refetchAvailability({ silent: true });
+    refetchMine({ silent: true });
+  }, [refetchTables, refetchAvailability, refetchMine]);
+
+  const myReservations = myApi.data || [];
+  const loading = tablesApi.loading || availabilityApi.loading;
+  const loadError = tablesApi.error || availabilityApi.error || myApi.error;
 
   return {
     dates,
@@ -182,5 +207,9 @@ export default function useReservation() {
     createReservation,
     cancelReservation,
     myReservations,
+    isSaving,
+    loading,
+    loadError,
+    refresh,
   };
 }

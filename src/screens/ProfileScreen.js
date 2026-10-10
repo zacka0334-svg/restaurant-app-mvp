@@ -26,7 +26,7 @@ export default function ProfileScreen() {
           cartDispatch({ type: CLEAR_CART });
           // Reset the whole navigation stack first, then clear the user.
           resetToLogin();
-          logout();
+          logout(); // clears the token from memory and AsyncStorage
         },
       },
     ]);

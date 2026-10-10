@@ -4,9 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { useMenu } from '../context/MenuContext';
 import { ADD_ITEM } from '../reducers/cartReducer';
-import { categories, fetchMenu } from '../data/menu';
+import { categories } from '../data/categories';
+import useApi from '../hooks/useApi';
+import useRefetchOnFocus from '../hooks/useRefetchOnFocus';
 import useDebounce from '../hooks/useDebounce';
 import MenuItemCard from '../components/MenuItemCard';
 import { AppButton, Chip, EmptyState, Screen } from '../components/ui';
@@ -24,14 +25,16 @@ const MAX_RECENT = 5;
 export default function MenuScreen({ navigation }) {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { menuItems } = useMenu(); // shared with the Manager Dashboard (Q10)
   const { state: cart, dispatch } = useCart();
 
-  // ---- Q4: loading / error / refresh state --------------------------------
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // ---- A2 Q6: menu comes from the server -------------------------------------
+  // useApi runs a useEffect that calls GET /api/menu when the screen opens
+  // (this replaced the fake Promise from A1). Loading, error + Retry and
+  // pull-to-refresh all still work.
+  const { data, loading: isLoading, error, refetch } = useApi('/menu', { initialData: [] });
+  const menuItems = data || [];
   const [refreshing, setRefreshing] = useState(false);
-  const requestRef = useRef(null); // holds the cancel() of the running request
+  useRefetchOnFocus(refetch); // coming back to the tab shows the latest prices
 
   // ---- Q4/Q8: filters --------------------------------------------------------
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -58,36 +61,14 @@ export default function MenuScreen({ navigation }) {
   const renderCount = useRef(0);
   renderCount.current += 1;
 
-  // Simulated fetch. The data itself now lives in MenuContext so that manager
-  // edits appear here instantly; this request models the network round trip
-  // (loading spinner, error + Retry, pull-to-refresh).
   const load = useCallback(
-    (asRefresh = false) => {
-      requestRef.current?.cancel();
+    async (asRefresh = false) => {
       if (asRefresh) setRefreshing(true);
-      else setIsLoading(true);
-      setError(null);
-
-      const request = fetchMenu(menuItems);
-      requestRef.current = request;
-      request.promise
-        .then(() => setError(null))
-        .catch((err) => setError(err.message))
-        .finally(() => {
-          setIsLoading(false);
-          setRefreshing(false);
-        });
+      await refetch({ silent: asRefresh });
+      setRefreshing(false);
     },
-    [menuItems]
+    [refetch]
   );
-
-  // Q4: runs once on mount. The cleanup clears the timer so no state update
-  // happens after the screen unmounts.
-  useEffect(() => {
-    load(false);
-    return () => requestRef.current?.cancel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Q5: remember the last five distinct searches. The previous query is kept
   // in a ref so the same term typed twice in a row is not added again.

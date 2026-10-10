@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import useRefetchOnFocus from '../hooks/useRefetchOnFocus';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Alert from '../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,23 +14,38 @@ export default function ReservationScreen() {
   const { colors } = useTheme();
   const r = useReservation();
   const [showConfirm, setShowConfirm] = useState(false); // pure UI state
+  useRefetchOnFocus(r.refresh); // see bookings the manager accepted meanwhile
 
   const openConfirm = () => {
     if (r.validate()) setShowConfirm(true);
   };
 
-  const confirmBooking = () => {
-    const created = r.createReservation();
-    setShowConfirm(false);
-    if (created) {
-      Alert.alert('Table requested 🎉', `Your booking ${created.id} is waiting for the manager to accept it.`);
+  const confirmBooking = async () => {
+    try {
+      const created = await r.createReservation();
+      setShowConfirm(false);
+      if (created) {
+        Alert.alert('Table requested 🎉', `Table ${created.tableNumber} on ${created.date} at ${created.time} is waiting for the manager to accept it.`);
+      }
+    } catch (err) {
+      // e.g. 409: someone else booked this table a moment ago
+      setShowConfirm(false);
+      Alert.alert('Booking failed', err.message);
+    }
+  };
+
+  const cancelBooking = async (id) => {
+    try {
+      await r.cancelReservation(id);
+    } catch (err) {
+      Alert.alert('Could not cancel', err.message);
     }
   };
 
   const askCancel = (res) =>
     Alert.alert('Cancel reservation?', `${res.date} at ${res.time} for ${res.partySize}.`, [
       { text: 'Keep it', style: 'cancel' },
-      { text: 'Cancel booking', style: 'destructive', onPress: () => r.cancelReservation(res.id) },
+      { text: 'Cancel booking', style: 'destructive', onPress: () => cancelBooking(res.id) },
     ]);
 
   const dateLabel = r.dates.find((d) => d.key === r.date)?.label;
@@ -37,6 +53,12 @@ export default function ReservationScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl * 2 }} keyboardShouldPersistTaps="handled">
+        {r.loadError ? (
+          <Card style={{ marginBottom: spacing.md }}>
+            <Text style={{ color: colors.danger }}>{r.loadError}</Text>
+            <AppButton small title="Retry" onPress={r.refresh} style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }} />
+          </Card>
+        ) : null}
         <SectionTitle style={{ marginTop: 0 }}>Date</SectionTitle>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {r.dates.map((d) => (
@@ -117,7 +139,7 @@ export default function ReservationScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.text, fontWeight: '800' }}>{res.date} · {res.time}</Text>
                   <Text style={{ color: colors.textMuted }}>
-                    {res.partySize} guests · Table {res.tableId.replace('t', '')} · {res.status}
+                    {res.partySize} guests · Table {res.tableNumber} · {res.status}
                   </Text>
                 </View>
                 {res.status === 'Pending' || res.status === 'Accepted' ? (
@@ -149,7 +171,7 @@ export default function ReservationScreen() {
             ))}
             <View style={styles.modalButtons}>
               <AppButton title="Edit" variant="outline" onPress={() => setShowConfirm(false)} style={{ flex: 1 }} />
-              <AppButton title="Confirm" onPress={confirmBooking} style={{ flex: 1 }} />
+              <AppButton title="Confirm" onPress={confirmBooking} loading={r.isSaving} style={{ flex: 1 }} />
             </View>
           </View>
         </View>

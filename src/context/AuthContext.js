@@ -1,58 +1,61 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import seedUsers from '../data/users';
-import usePersistentReducer from '../hooks/usePersistentReducer';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api, setAuthToken } from '../api/client';
 
 const AuthContext = createContext(undefined);
-
-// Registered users (seeded from src/data/users.js, sign-ups are appended).
-function usersReducer(state, action) {
-  switch (action.type) {
-    case 'HYDRATE':
-      return Array.isArray(action.payload) ? action.payload : state;
-    case 'ADD_USER':
-      return [...state, action.payload];
-    default:
-      return state;
-  }
-}
+const SESSION_KEY = '@dastarkhwan/session'; // { token, user }
 
 export function AuthProvider({ children }) {
-  const [users, dispatchUsers, isHydrated] = usePersistentReducer(usersReducer, seedUsers, '@dastarkhwan/users');
-  // The logged-in user lives here instead of in LoginScreen's local state (Q6).
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  const login = useCallback((loggedInUser) => {
-    // Never keep the password in the session object.
-    const { password, ...safeUser } = loggedInUser;
-    setUser(safeUser);
+  // On app start: read the saved session, so the user stays logged in.
+  useEffect(() => {
+    AsyncStorage.getItem(SESSION_KEY)
+      .then((raw) => {
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        setAuthToken(saved.token);
+        setToken(saved.token);
+        setUser(saved.user);
+      })
+      .catch(() => {})
+      .finally(() => setIsHydrated(true));
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const saveSession = useCallback(async ({ token: newToken, user: newUser }) => {
+    setAuthToken(newToken);
+    setToken(newToken);
+    setUser(newUser);
+    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify({ token: newToken, user: newUser }));
+    return newUser;
+  }, []);
 
-  // Mock "API" helpers used by the Login/Signup screen.
-  const findUser = useCallback(
-    (email, password) =>
-      users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password) || null,
-    [users]
+  // POST /api/auth/login -> { token, user }
+  const login = useCallback(
+    async (email, password) => saveSession(await api('/auth/login', { method: 'POST', body: { email, password } })),
+    [saveSession]
   );
 
-  const emailExists = useCallback(
-    (email) => users.some((u) => u.email.toLowerCase() === email.trim().toLowerCase()),
-    [users]
+  // POST /api/auth/register -> { token, user }
+  const register = useCallback(
+    async ({ fullName, email, password, role }) =>
+      saveSession(await api('/auth/register', { method: 'POST', body: { fullName, email, password, role } })),
+    [saveSession]
   );
 
-  const signup = useCallback(
-    ({ fullName, email, password, role }) => {
-      const newUser = { id: `u${Date.now()}`, fullName: fullName.trim(), email: email.trim().toLowerCase(), password, role };
-      dispatchUsers({ type: 'ADD_USER', payload: newUser });
-      return newUser;
-    },
-    [dispatchUsers]
-  );
+  // Logout clears the token from memory AND from AsyncStorage.
+  const logout = useCallback(async () => {
+    setAuthToken(null);
+    setToken(null);
+    setUser(null);
+    await AsyncStorage.removeItem(SESSION_KEY);
+  }, []);
 
   const value = useMemo(
-    () => ({ user, login, logout, findUser, emailExists, signup, isHydrated }),
-    [user, login, logout, findUser, emailExists, signup, isHydrated]
+    () => ({ user, token, login, register, logout, isHydrated }),
+    [user, token, login, register, logout, isHydrated]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

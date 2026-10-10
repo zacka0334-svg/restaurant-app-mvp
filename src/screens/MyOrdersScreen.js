@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import { useOrders } from '../context/OrdersContext';
+import useApi from '../hooks/useApi';
+import useRefetchOnFocus from '../hooks/useRefetchOnFocus';
 import { useTheme } from '../context/ThemeContext';
 import { AppButton, EmptyState, Screen } from '../components/ui';
 import { radius, spacing } from '../theme/colors';
@@ -21,10 +21,35 @@ export function statusColor(status, colors) {
 // Customer's order history; tapping an order opens Order Tracking.
 export default function MyOrdersScreen({ navigation }) {
   const { colors } = useTheme();
-  const { user } = useAuth();
-  const { orders } = useOrders();
+  // A2: GET /api/orders/my (the server only returns this customer's orders)
+  const { data, loading, error, refetch } = useApi('/orders/my', { initialData: [] });
+  const myOrders = data || [];
+  const [refreshing, setRefreshing] = useState(false);
+  useRefetchOnFocus(refetch);
 
-  const myOrders = useMemo(() => orders.filter((o) => o.customerId === user?.id), [orders, user]);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch({ silent: true });
+    setRefreshing(false);
+  };
+
+  if (loading) {
+    return (
+      <Screen style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </Screen>
+    );
+  }
+
+  if (error) {
+    return (
+      <Screen style={{ justifyContent: 'center' }}>
+        <EmptyState emoji="📡" title="Something went wrong" message={error}>
+          <AppButton title="Retry" onPress={() => refetch()} style={{ marginTop: 12 }} />
+        </EmptyState>
+      </Screen>
+    );
+  }
 
   if (myOrders.length === 0) {
     return (
@@ -42,15 +67,17 @@ export default function MyOrdersScreen({ navigation }) {
         data={myOrders}
         keyExtractor={(o) => o.id}
         contentContainerStyle={{ padding: spacing.lg }}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         renderItem={({ item }) => (
           <Pressable
             onPress={() => navigation.navigate('OrderTracking', { orderId: item.id })}
             style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontWeight: '800' }}>{item.id} · {item.type}</Text>
+              <Text style={{ color: colors.text, fontWeight: '800' }}>#{item.id.slice(-6).toUpperCase()} · {item.type}</Text>
               <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                {new Date(item.timestamp).toLocaleString()} · {item.items.reduce((s, i) => s + i.quantity, 0)} item(s)
+                {new Date(item.createdAt).toLocaleString()} · {item.items.reduce((s, i) => s + i.quantity, 0)} item(s)
               </Text>
               <Text style={{ color: colors.text, fontWeight: '700', marginTop: 2 }}>{formatPrice(item.total)}</Text>
             </View>

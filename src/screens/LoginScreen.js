@@ -38,7 +38,7 @@ const validateSignup = (v) => validateAuth(v, 'signup');
 export default function LoginScreen({ navigation }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { login, findUser, emailExists, signup } = useAuth();
+  const { login, register } = useAuth();
 
   // UI mode, password visibility and submitting flag stay as local useState.
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
@@ -60,37 +60,29 @@ export default function LoginScreen({ navigation }) {
 
   const goHome = useCallback(
     (account) => {
-      login(account); // store the user in AuthContext (Q6)
       // Customer -> Menu, Manager -> Dashboard. reset() so Back cannot return to Login.
       navigation.reset({
         index: 0,
         routes: [{ name: 'Main', params: { screen: account.role === 'manager' ? 'DashboardTab' : 'MenuTab' } }],
       });
     },
-    [login, navigation]
+    [navigation]
   );
 
-  const onValid = (formValues) => {
+  // A2: the server checks the email/password. The app keeps its own
+  // validation (useForm) for quick feedback before sending anything.
+  const onValid = async (formValues) => {
     setIsSubmitting(true);
-    // Simulated network delay of one second.
-    setTimeout(() => {
+    try {
+      const account = isSignup
+        ? await register(formValues) // POST /api/auth/register
+        : await login(formValues.email, formValues.password); // POST /api/auth/login
+      goHome(account);
+    } catch (err) {
+      Alert.alert(isSignup ? 'Signup failed' : 'Login failed', err.message);
+    } finally {
       setIsSubmitting(false);
-      if (isSignup) {
-        if (emailExists(formValues.email)) {
-          Alert.alert('Signup failed', 'An account with this email already exists. Please log in instead.');
-          return;
-        }
-        const created = signup(formValues);
-        goHome(created);
-      } else {
-        const account = findUser(formValues.email, formValues.password);
-        if (!account) {
-          Alert.alert('Login failed', 'Incorrect email or password. Please try again.');
-          return;
-        }
-        goHome(account);
-      }
-    }, 1000);
+    }
   };
 
   const eye = (

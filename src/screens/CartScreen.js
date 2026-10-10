@@ -4,7 +4,7 @@ import Alert from '../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
-import { mockTables } from '../data/tables';
+import useApi from '../hooks/useApi';
 import {
   APPLY_PROMO, CLEAR_CART, DECREMENT, INCREMENT, REMOVE_ITEM, REMOVE_PROMO, UPDATE_NOTE, isValidPromo,
 } from '../reducers/cartReducer';
@@ -25,6 +25,8 @@ function buildPickupTimes() {
 export default function CartScreen({ navigation }) {
   const { colors } = useTheme();
   const { state, dispatch, itemCount } = useCart();
+  // A2: tables come from the server (GET /api/tables)
+  const { data: tables } = useApi('/tables', { initialData: [] });
 
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
@@ -60,7 +62,8 @@ export default function CartScreen({ navigation }) {
       Alert.alert('Choose a pickup time', 'Please pick when you will collect your order.');
       return;
     }
-    navigation.navigate('OrderSummary', { orderType, tableId, pickupTime });
+    const tableNumber = (tables || []).find((t) => t.id === tableId)?.number;
+    navigation.navigate('OrderSummary', { orderType, tableId, tableNumber, pickupTime });
   };
 
   const confirmClear = () =>
@@ -159,7 +162,7 @@ export default function CartScreen({ navigation }) {
         <>
           <Text style={[styles.hint, { color: colors.textMuted }]}>Select your table</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {mockTables.map((t) => (
+            {(tables || []).map((t) => (
               <Chip key={t.id} label={`T${t.number} · ${t.seats} seats`} selected={tableId === t.id} onPress={() => setTableId(t.id)} />
             ))}
           </ScrollView>

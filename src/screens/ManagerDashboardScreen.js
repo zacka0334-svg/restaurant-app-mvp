@@ -1,15 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import Alert from '../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { useOrders } from '../context/OrdersContext';
-import { useReservations } from '../context/ReservationsContext';
-import { useMenu } from '../context/MenuContext';
-import { categories } from '../data/menu';
-import { mockTables } from '../data/tables';
-import { CANCELLED, canTransition, nextStatus } from '../reducers/ordersReducer';
-import { SET_RESERVATION_STATUS } from '../reducers/reservationsReducer';
+import { categories } from '../data/categories';
+import { CANCELLED, canCancel, nextStatus } from '../utils/orderStatus';
+import { api } from '../api/client';
+import useApi from '../hooks/useApi';
+import useRefetchOnFocus from '../hooks/useRefetchOnFocus';
 import useForm from '../hooks/useForm';
 import { AppButton, Card, Chip, EmptyState, Field, Screen, SectionTitle } from '../components/ui';
 import { statusColor } from './MyOrdersScreen';
@@ -23,10 +21,24 @@ const TABS = [
 ];
 
 // ---------------------------------------------------------------- Orders tab
-function OrdersTab() {
+// Runs a server call, then reloads the list from the server (A2 Q6.5).
+async function runAndReload(request, reload) {
+  try {
+    await request();
+  } catch (err) {
+    Alert.alert('Not saved', err.message); // e.g. 400 from the server's status rules
+  } finally {
+    reload({ silent: true });
+  }
+}
+
+function OrdersTab({ orders, reload, refreshing, onRefresh }) {
   const { colors } = useTheme();
-  const { orders, updateStatus } = useOrders();
   const [showAll, setShowAll] = useState(false);
+
+  // PATCH /api/orders/:id/status
+  const updateStatus = (id, status) =>
+    runAndReload(() => api(`/orders/${id}/status`, { method: 'PATCH', body: { status } }), reload);
 
   const list = useMemo(
     () => (showAll ? orders : orders.filter((o) => o.status !== 'Served' && o.status !== CANCELLED)),
@@ -38,6 +50,8 @@ function OrdersTab() {
       data={list}
       keyExtractor={(o) => o.id}
       contentContainerStyle={styles.pad}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       ListHeaderComponent={
         <View style={styles.rowBetween}>
           <Text style={{ color: colors.textMuted }}>{list.length} order(s)</Text>
@@ -50,28 +64,27 @@ function OrdersTab() {
       ListEmptyComponent={<EmptyState emoji="👨‍🍳" title="No active orders" message="New customer orders will appear here." />}
       renderItem={({ item: o }) => {
         const next = nextStatus(o.status);
-        const table = mockTables.find((t) => t.id === o.tableId);
         return (
           <Card style={{ marginBottom: spacing.md }}>
             <View style={styles.rowBetween}>
-              <Text style={{ color: colors.text, fontWeight: '900' }}>{o.id}</Text>
+              <Text style={{ color: colors.text, fontWeight: '900' }}>#{o.id.slice(-6).toUpperCase()}</Text>
               <View style={[styles.pill, { backgroundColor: statusColor(o.status, colors) }]}>
                 <Text style={styles.pillText}>{o.status}</Text>
               </View>
             </View>
             <Text style={{ color: colors.textMuted, marginVertical: 4 }}>
-              {o.customerName} · {o.type === 'Dine-in' ? `Table ${table ? table.number : '-'}` : `Pickup ${o.pickupTime}`} · {new Date(o.timestamp).toLocaleTimeString()}
+              {o.customerName} · {o.type === 'Dine-in' ? `Table ${o.tableNumber ?? '-'}` : `Pickup ${o.pickupTime}`} · {new Date(o.createdAt).toLocaleTimeString()}
             </Text>
-            {o.items.map((i) => (
-              <Text key={i.id} style={{ color: colors.text }}>
+            {o.items.map((i, index) => (
+              <Text key={`${i.menuItem}-${index}`} style={{ color: colors.text }}>
                 {i.quantity} × {i.name}{i.note ? `  ·  “${i.note}”` : ''}
               </Text>
             ))}
             <Text style={{ color: colors.text, fontWeight: '800', marginTop: 6 }}>{formatPrice(o.total)}</Text>
             <View style={[styles.row, { marginTop: spacing.sm, gap: spacing.sm, flexWrap: 'wrap' }]}>
-              {next ? <AppButton small title={`Mark ${next}`} onPress={() => updateStatus(o.id, next, 'manager')} /> : null}
-              {canTransition(o.status, CANCELLED) ? (
-                <AppButton small title="Cancel" variant="outline" onPress={() => updateStatus(o.id, CANCELLED, 'manager')} />
+              {next ? <AppButton small title={`Mark ${next}`} onPress={() => updateStatus(o.id, next)} /> : null}
+              {canCancel(o.status) ? (
+                <AppButton small title="Cancel" variant="outline" onPress={() => updateStatus(o.id, CANCELLED)} />
               ) : null}
             </View>
           </Card>
@@ -82,9 +95,8 @@ function OrdersTab() {
 }
 
 // ---------------------------------------------------------- Reservations tab
-function ReservationsTab() {
+function ReservationsTab({ reservations, reload, refreshing, onRefresh }) {
   const { colors } = useTheme();
-  const { reservations, dispatch } = useReservations();
 
   const sorted = useMemo(
     // Pending requests first, then by date and time.
@@ -97,13 +109,17 @@ function ReservationsTab() {
     [reservations]
   );
 
-  const setStatus = (id, status) => dispatch({ type: SET_RESERVATION_STATUS, payload: { id, status } });
+  // PATCH /api/reservations/:id  { status: 'Accepted' | 'Declined' }
+  const setStatus = (id, status) =>
+    runAndReload(() => api(`/reservations/${id}`, { method: 'PATCH', body: { status } }), reload);
 
   return (
     <FlatList
       data={sorted}
       keyExtractor={(r) => r.id}
       contentContainerStyle={styles.pad}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       ListEmptyComponent={<EmptyState emoji="📅" title="No reservations" />}
       renderItem={({ item: r }) => (
         <Card style={{ marginBottom: spacing.md }}>
@@ -114,7 +130,7 @@ function ReservationsTab() {
             </Text>
           </View>
           <Text style={{ color: colors.textMuted, marginVertical: 4 }}>
-            {r.name} · {r.phone} · {r.partySize} guests · Table {r.tableId.replace('t', '')}
+            {r.name} · {r.phone} · {r.partySize} guests · Table {r.tableNumber}
           </Text>
           {r.status === 'Pending' ? (
             <View style={[styles.row, { gap: spacing.sm }]}>
@@ -137,9 +153,8 @@ function validateNewItem(v) {
   return e;
 }
 
-function MenuTab() {
+function MenuTab({ menuItems, reload, refreshing, onRefresh }) {
   const { colors } = useTheme();
-  const { menuItems, addItem, updatePrice, toggleAvailability } = useMenu();
   const { values, errors, handleChange, handleSubmit, reset } = useForm(NEW_ITEM, validateNewItem);
   const [priceDrafts, setPriceDrafts] = useState({}); // { [id]: 'text' }
 
@@ -150,8 +165,29 @@ function MenuTab() {
       Alert.alert('Invalid price', 'Price must be a number greater than 0.');
       return;
     }
-    updatePrice(item.id, draft);
     setPriceDrafts(({ [item.id]: _saved, ...rest }) => rest);
+    // PUT /api/menu/:id  (manager token required)
+    runAndReload(() => api(`/menu/${item.id}`, { method: 'PUT', body: { price: Number(draft) } }), reload);
+  };
+
+  // PUT /api/menu/:id  { isAvailable }
+  const toggleAvailability = (item) =>
+    runAndReload(() => api(`/menu/${item.id}`, { method: 'PUT', body: { isAvailable: !item.isAvailable } }), reload);
+
+  // POST /api/menu
+  const addItem = async (v) => {
+    try {
+      await api('/menu', {
+        method: 'POST',
+        body: { name: v.name, price: Number(v.price), description: v.description, category: v.category, image: v.image },
+      });
+      reset();
+      Alert.alert('Added', `${v.name} is now on the menu for every customer.`);
+    } catch (err) {
+      Alert.alert('Not added', err.message);
+    } finally {
+      reload({ silent: true });
+    }
   };
 
   const header = (
@@ -171,11 +207,7 @@ function MenuTab() {
       <AppButton
         title="Add to menu"
         onPress={() =>
-          handleSubmit((v) => {
-            addItem(v);
-            reset();
-            Alert.alert('Added', `${v.name} is now on the customer menu.`);
-          })
+          handleSubmit(addItem)
         }
       />
     </Card>
@@ -186,6 +218,8 @@ function MenuTab() {
       data={menuItems}
       keyExtractor={(i) => i.id}
       contentContainerStyle={styles.pad}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
         <>
@@ -218,7 +252,7 @@ function MenuTab() {
             <View style={{ alignItems: 'center' }}>
               <Switch
                 value={item.isAvailable}
-                onValueChange={() => toggleAvailability(item.id)}
+                onValueChange={() => toggleAvailability(item)}
                 trackColor={{ true: colors.success, false: colors.border }}
               />
               <Text style={{ color: colors.textMuted, fontSize: 10 }}>{item.isAvailable ? 'Available' : 'Hidden'}</Text>
@@ -233,9 +267,43 @@ function MenuTab() {
 // ------------------------------------------------------------ Dashboard
 export default function ManagerDashboardScreen() {
   const { colors } = useTheme();
-  const { orders } = useOrders();
-  const { reservations } = useReservations();
   const [tab, setTab] = useState('orders');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // A2: the dashboard reads everything from the server (manager token).
+  const ordersApi = useApi('/orders', { initialData: [] }); // GET /api/orders
+  const reservationsApi = useApi('/reservations', { initialData: [] }); // GET /api/reservations
+  const menuApi = useApi('/menu', { initialData: [] }); // GET /api/menu
+  const orders = ordersApi.data || [];
+  const reservations = reservationsApi.data || [];
+  const menuItems = menuApi.data || [];
+  const { refetch: reloadOrders } = ordersApi;
+  const { refetch: reloadReservations } = reservationsApi;
+  const { refetch: reloadMenu } = menuApi;
+
+  const reloadAll = React.useCallback(() => {
+    reloadOrders({ silent: true });
+    reloadReservations({ silent: true });
+    reloadMenu({ silent: true });
+  }, [reloadOrders, reloadReservations, reloadMenu]);
+  useRefetchOnFocus(reloadAll);
+
+  // New customer orders and bookings show up on their own every 10 s.
+  useEffect(() => {
+    const id = setInterval(() => {
+      reloadOrders({ silent: true });
+      reloadReservations({ silent: true });
+    }, 10000);
+    return () => clearInterval(id);
+  }, [reloadOrders, reloadReservations]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([reloadOrders({ silent: true }), reloadReservations({ silent: true }), reloadMenu({ silent: true })]);
+    setRefreshing(false);
+  };
+
+  const loadError = ordersApi.error || reservationsApi.error || menuApi.error;
 
   const activeOrders = orders.filter((o) => o.status !== 'Served' && o.status !== CANCELLED).length;
   const pendingRes = reservations.filter((r) => r.status === 'Pending').length;
@@ -245,7 +313,7 @@ export default function ManagerDashboardScreen() {
   const todayRevenue = useMemo(() => {
     const today = new Date().toDateString();
     return orders
-      .filter((o) => o.status !== CANCELLED && new Date(o.timestamp).toDateString() === today)
+      .filter((o) => o.status !== CANCELLED && new Date(o.createdAt).toDateString() === today)
       .reduce((sum, o) => sum + o.total, 0);
   }, [orders]);
 
@@ -275,7 +343,16 @@ export default function ManagerDashboardScreen() {
           </Pressable>
         ))}
       </View>
-      {tab === 'orders' ? <OrdersTab /> : tab === 'reservations' ? <ReservationsTab /> : <MenuTab />}
+      {loadError ? (
+        <Text style={{ color: colors.danger, marginHorizontal: spacing.lg, marginTop: spacing.sm }}>{loadError}</Text>
+      ) : null}
+      {tab === 'orders' ? (
+        <OrdersTab orders={orders} reload={reloadOrders} refreshing={refreshing} onRefresh={onRefresh} />
+      ) : tab === 'reservations' ? (
+        <ReservationsTab reservations={reservations} reload={reloadReservations} refreshing={refreshing} onRefresh={onRefresh} />
+      ) : (
+        <MenuTab menuItems={menuItems} reload={reloadMenu} refreshing={refreshing} onRefresh={onRefresh} />
+      )}
     </Screen>
   );
 }

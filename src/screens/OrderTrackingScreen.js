@@ -1,17 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Alert from '../utils/alert';
-import { useOrders } from '../context/OrdersContext';
 import { useTheme } from '../context/ThemeContext';
-import { mockTables } from '../data/tables';
-import { CANCELLED, ORDER_STATUSES, nextStatus } from '../reducers/ordersReducer';
+import { api } from '../api/client';
+import { CANCELLED, canCancel } from '../utils/orderStatus';
 import StatusStepper from '../components/StatusStepper';
 import { AppButton, Card, EmptyState, Screen, SectionTitle } from '../components/ui';
 import { spacing } from '../theme/colors';
 import { formatDuration, formatPrice } from '../utils/pricing';
 
-// Demo timings (ms after the order was placed).
-export const AUTO_PROGRESS = { Preparing: 10000, Ready: 20000, Served: 30000 };
+const POLL_EVERY_MS = 10000; // ask the server for the latest status every 10 s
 
 const MESSAGES = {
   Pending: 'We have received your order and sent it to the kitchen.',
@@ -21,70 +19,89 @@ const MESSAGES = {
   Cancelled: 'This order was cancelled.',
 };
 
-// Which status the order should have reached after `elapsed` ms.
-function targetStatus(elapsed) {
-  if (elapsed >= AUTO_PROGRESS.Served) return 'Served';
-  if (elapsed >= AUTO_PROGRESS.Ready) return 'Ready';
-  if (elapsed >= AUTO_PROGRESS.Preparing) return 'Preparing';
-  return 'Pending';
-}
-
 export default function OrderTrackingScreen({ route }) {
   const { colors } = useTheme();
-  const { orders, updateStatus, cancelOrder } = useOrders();
-  const order = orders.find((o) => o.id === route.params?.orderId);
+  const orderId = route.params?.orderId;
 
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [now, setNow] = useState(Date.now());
+
+  // GET /api/orders/my and pick this order out of the list.
+  const loadOrder = useCallback(async () => {
+    try {
+      const mine = await api('/orders/my');
+      setOrder(mine.find((o) => o.id === orderId) || null);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId]);
+
   const isFinished = !order || order.status === 'Served' || order.status === CANCELLED;
 
-  // Timer 1: running elapsed-time counter, ticks every second.
+  // A2 Q7: the A1 fake timer is gone. Instead we poll the server every
+  // 10 seconds, so when the MANAGER changes the status on another phone,
+  // the customer sees it here. The interval is cleared in the cleanup.
+  useEffect(() => {
+    loadOrder();
+    const id = setInterval(loadOrder, POLL_EVERY_MS);
+    return () => clearInterval(id);
+  }, [loadOrder]);
+
+  // Elapsed-time counter, ticks every second until the order is finished.
   useEffect(() => {
     if (isFinished) return undefined;
     const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id); // cleanup
+    return () => clearInterval(id);
   }, [isFinished]);
 
-  // Timer 2: moves the status forward automatically (Pending -> Preparing
-  // -> Ready -> Served). Stops if a manager has changed the status by hand.
-  const orderId = order?.id;
-  const status = order?.status;
-  const timestamp = order?.timestamp;
-  const manualOverride = order?.manualOverride;
-  useEffect(() => {
-    if (!orderId || isFinished || manualOverride) return undefined;
-    const id = setInterval(() => {
-      const next = nextStatus(status);
-      const target = targetStatus(Date.now() - timestamp);
-      if (next && ORDER_STATUSES.indexOf(target) >= ORDER_STATUSES.indexOf(next)) {
-        updateStatus(orderId, next, 'system');
-      }
-    }, 1000);
-    return () => clearInterval(id); // cleanup
-  }, [orderId, status, timestamp, manualOverride, isFinished, updateStatus]);
-
-  if (!order) {
+  if (loading) {
     return (
-      <Screen style={{ justifyContent: 'center' }}>
-        <EmptyState emoji="🧾" title="Order not found" />
+      <Screen style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </Screen>
     );
   }
 
-  const finishedAt = isFinished ? order.history?.[order.history.length - 1]?.at || now : now;
-  const elapsed = finishedAt - order.timestamp;
-  const table = mockTables.find((t) => t.id === order.tableId);
+  if (!order) {
+    return (
+      <Screen style={{ justifyContent: 'center' }}>
+        <EmptyState emoji="🧾" title={error ? 'Could not load the order' : 'Order not found'} message={error || undefined}>
+          <AppButton title="Retry" onPress={loadOrder} style={{ marginTop: 12 }} />
+        </EmptyState>
+      </Screen>
+    );
+  }
+
+  const placedAt = new Date(order.createdAt).getTime();
+  const finishedAt = isFinished ? new Date(order.updatedAt).getTime() : now;
+  const elapsed = finishedAt - placedAt;
+  const managerUpdated = (order.history || []).some((h) => h.by === 'manager');
+
+  const cancel = async () => {
+    try {
+      const updated = await api(`/orders/${order.id}/cancel`, { method: 'PATCH' });
+      setOrder(updated);
+    } catch (err) {
+      Alert.alert('Could not cancel', err.message);
+    }
+  };
 
   const confirmCancel = () =>
     Alert.alert('Cancel order?', 'The kitchen has not started yet, so you can still cancel.', [
       { text: 'Keep order', style: 'cancel' },
-      { text: 'Cancel order', style: 'destructive', onPress: () => cancelOrder(order.id, 'customer') },
+      { text: 'Cancel order', style: 'destructive', onPress: cancel },
     ]);
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl * 2 }}>
         <Card style={{ alignItems: 'center' }}>
-          <Text style={{ color: colors.textMuted, fontWeight: '600' }}>Order {order.id}</Text>
+          <Text style={{ color: colors.textMuted, fontWeight: '600' }}>Order #{order.id.slice(-6).toUpperCase()}</Text>
           <Text style={[styles.status, { color: order.status === CANCELLED ? colors.danger : colors.primary }]}>{order.status}</Text>
           <Text style={{ color: colors.text, textAlign: 'center', marginBottom: spacing.lg }}>{MESSAGES[order.status]}</Text>
           <StatusStepper status={order.status} />
@@ -92,25 +109,26 @@ export default function OrderTrackingScreen({ route }) {
             <Text style={{ color: colors.textMuted }}>Elapsed</Text>
             <Text style={[styles.timerValue, { color: colors.text }]}>{formatDuration(elapsed)}</Text>
           </View>
-          {order.manualOverride ? (
-            <Text style={{ color: colors.textMuted, fontSize: 12 }}>Status is now being updated by the restaurant manager.</Text>
-          ) : null}
+          <Text style={{ color: colors.textMuted, fontSize: 12, textAlign: 'center' }}>
+            {managerUpdated ? 'Updated by the restaurant. ' : ''}Checks for updates every 10 seconds.
+          </Text>
+          {error ? <Text style={{ color: colors.danger, fontSize: 12, marginTop: 4 }}>{error}</Text> : null}
         </Card>
 
         <SectionTitle>Details</SectionTitle>
         <Card>
           <Text style={{ color: colors.text, fontWeight: '700', marginBottom: 6 }}>
-            {order.type === 'Dine-in' ? `Dine-in · Table ${table ? table.number : '-'}` : `Takeaway · pickup ${order.pickupTime}`}
+            {order.type === 'Dine-in' ? `Dine-in · Table ${order.tableNumber ?? '-'}` : `Takeaway · pickup ${order.pickupTime}`}
           </Text>
-          {order.items.map((i) => (
-            <Text key={i.id} style={{ color: colors.textMuted, paddingVertical: 2 }}>
+          {order.items.map((i, index) => (
+            <Text key={`${i.menuItem}-${index}`} style={{ color: colors.textMuted, paddingVertical: 2 }}>
               {i.quantity} × {i.name}{i.note ? ` (${i.note})` : ''}
             </Text>
           ))}
           <Text style={{ color: colors.text, fontWeight: '900', marginTop: 8, fontSize: 16 }}>Total {formatPrice(order.total)}</Text>
         </Card>
 
-        {order.status === 'Pending' ? (
+        {canCancel(order.status) ? (
           <AppButton title="Cancel order" variant="outline" onPress={confirmCancel} style={{ marginTop: spacing.lg }} />
         ) : null}
       </ScrollView>

@@ -152,6 +152,9 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const { colors, isDark } = useTheme();
+  const { user } = useAuth();
+  // A2: a saved session (AsyncStorage) skips the login screen.
+  const [startRoute] = React.useState(user ? 'Main' : 'Login');
 
   const navTheme = useMemo(() => {
     const base = isDark ? DarkTheme : DefaultTheme;
@@ -171,7 +174,7 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer ref={navigationRef} theme={navTheme}>
-      <RootStack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+      <RootStack.Navigator initialRouteName={startRoute} screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="Login" component={LoginScreen} />
         <RootStack.Screen name="Main" component={MainTabs} />
       </RootStack.Navigator>

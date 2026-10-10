@@ -1,11 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useOrders } from '../context/OrdersContext';
+import Alert from '../utils/alert';
+import { api } from '../api/client';
 import { useTheme } from '../context/ThemeContext';
-import { mockTables } from '../data/tables';
 import { CLEAR_CART } from '../reducers/cartReducer';
 import { AppButton, Card, EmptyState, Screen, SectionTitle } from '../components/ui';
 import { spacing } from '../theme/colors';
@@ -13,13 +12,11 @@ import { SALES_TAX_RATE, SERVICE_CHARGE_RATE, computeTotals, formatPrice } from 
 
 export default function OrderSummaryScreen({ navigation, route }) {
   const { colors } = useTheme();
-  const { user } = useAuth();
   const { state: cart, dispatch } = useCart();
-  const { placeOrder } = useOrders();
   const [isPlacing, setIsPlacing] = useState(false);
 
-  const { orderType = 'Takeaway', tableId = null, pickupTime = null } = route.params || {};
-  const table = mockTables.find((t) => t.id === tableId);
+  const { orderType = 'Takeaway', tableId = null, tableNumber = null, pickupTime = null } = route.params || {};
+  const table = tableId ? { number: tableNumber } : null;
 
   // Q8: totals recomputed only when the cart items or the discount change.
   // Typing in another screen, toggling the theme, etc. will not redo the maths.
@@ -28,24 +25,30 @@ export default function OrderSummaryScreen({ navigation, route }) {
     [cart.items, cart.discountPercent]
   );
 
-  const onPlaceOrder = () => {
+  // A2: POST /api/orders. We only send WHAT was ordered (ids, quantities,
+  // notes). The server looks up the real prices and works out the total
+  // itself; the totals shown above are just a preview.
+  const onPlaceOrder = async () => {
     setIsPlacing(true);
-    // Small artificial delay so the user sees the button react.
-    setTimeout(() => {
-      const order = placeOrder({
-        user,
-        items: cart.items,
-        totals,
-        type: orderType,
-        tableId,
-        pickupTime,
-        promoCode: cart.promoCode,
+    try {
+      const order = await api('/orders', {
+        method: 'POST',
+        body: {
+          items: cart.items.map((i) => ({ id: i.id, quantity: i.quantity, note: i.note })),
+          type: orderType,
+          tableId,
+          pickupTime,
+          promoCode: cart.promoCode,
+        },
       });
       dispatch({ type: CLEAR_CART });
-      setIsPlacing(false);
       // Replace the summary so "back" from tracking returns to the (empty) cart.
       navigation.replace('OrderTracking', { orderId: order.id });
-    }, 600);
+    } catch (err) {
+      Alert.alert('Could not place order', err.message);
+    } finally {
+      setIsPlacing(false);
+    }
   };
 
   if (cart.items.length === 0) {

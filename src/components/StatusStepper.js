@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { ORDER_STATUSES } from '../reducers/ordersReducer';
+import { ORDER_STATUSES } from '../utils/orderStatus';
 
 const ICONS = { Pending: 'receipt-outline', Preparing: 'flame-outline', Ready: 'bag-check-outline', Served: 'restaurant-outline' };
 

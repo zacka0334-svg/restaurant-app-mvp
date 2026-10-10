@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import Alert from '../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useOrders } from '../context/OrdersContext';

@@ -1,8 +1,9 @@
 // Entry point of the backend. Run with: npm run dev
-require('dotenv').config(); // loads PORT from .env
+require('dotenv').config(); // loads PORT and MONGO_URI from .env
 
 const express = require('express');
 const cors = require('cors');
+const connectDB = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,7 +31,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || 'Server error' });
 });
 
-// 0.0.0.0 = listen on the Wi-Fi address too, so the phone can reach it.
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+async function start() {
+  if (!process.env.MONGO_URI) {
+    console.error('MONGO_URI must be set in server/.env (see .env.example)');
+    process.exit(1);
+  }
+  await connectDB();
+  // 0.0.0.0 = listen on the Wi-Fi address too, so the phone can reach it.
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+start();

@@ -5,6 +5,9 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 
+const menuRoutes = require('./routes/menuRoutes');
+const tableRoutes = require('./routes/tableRoutes');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -15,6 +18,9 @@ app.use(express.json()); // read JSON request bodies into req.body
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', time: new Date().toISOString() });
 });
+
+app.use('/api/menu', menuRoutes);
+app.use('/api/tables', tableRoutes);
 
 // Any URL that did not match a route above.
 app.use((req, res) => {

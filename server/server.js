@@ -8,6 +8,8 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const tableRoutes = require('./routes/tableRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const reservationRoutes = require('./routes/reservationRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,6 +25,8 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/tables', tableRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/reservations', reservationRoutes);
 
 // Any URL that did not match a route above.
 app.use((req, res) => {

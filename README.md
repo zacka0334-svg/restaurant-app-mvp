@@ -1,35 +1,129 @@
-# 🍛 Dastarkhwan: Restaurant App MVP
+# 🍛 Dastarkhwan: Restaurant App (React Native + Node.js + MongoDB)
 
 **Name:** Sikander Hayat  
 **Reg No:** 9315  
-**Assignment:** 1, Restaurant App MVP (frontend only, React Native), Fall 2026
+**Assignments:** A1 Restaurant App MVP (frontend) · **A2 Restaurant App with Server and Database**, Fall 2026
 
-A React Native (Expo) prototype of a restaurant app. Diners can browse the menu, search and sort it, fill a cart, apply promo codes, place dine-in or takeaway orders, book tables and track their orders. Managers can run incoming orders, reservations and the menu from a dashboard.
+A React Native (Expo) restaurant app. Diners browse the menu, search and sort it, fill a cart, apply promo codes, place dine-in or takeaway orders, book tables and track their orders. Managers run incoming orders, reservations and the menu from a dashboard.
 
-**▶️ Demo video (2 min):** [docs/demo-video.mp4](docs/demo-video.mp4)
-
-<table>
-  <tr>
-    <td align="center"><img src="docs/screenshots/02-menu.jpg" width="200"><br><b>Menu</b></td>
-    <td align="center"><img src="docs/screenshots/06-order-tracking.jpg" width="200"><br><b>Order tracking</b></td>
-    <td align="center"><img src="docs/screenshots/08-manager-orders.jpg" width="200"><br><b>Manager dashboard</b></td>
-  </tr>
-</table>
-
-It uses **no backend, no external API and no state-management library**. All data comes from mock files in `src/data`, lives in React state (Context + `useReducer`) and is saved to AsyncStorage.
+In **A2** the app talks to a **Node.js + Express server** with a **MongoDB** database, so every phone sees the same menu, orders and bookings.
 
 | Deliverable | Location |
 |---|---|
-| SRS (Question 1) | [`A1/SRS.pdf`](A1/SRS.pdf) |
-| UML diagrams (Question 2) | [`A1/UML/`](A1/UML) (PNG) |
-| App source (Questions 3–10) | [`src/`](src) and [`App.js`](App.js) |
-| Reducer tests (Question 7 bonus) | [`__tests__/`](__tests__) |
-| Screenshots | [`docs/screenshots/`](docs/screenshots) |
-| Demo video | [`docs/demo-video.mp4`](docs/demo-video.mp4) |
+| **A2** SRS_v2, diagrams, Postman collection | [`A2/SRS_v2.pdf`](A2/SRS_v2.pdf), [`A2/diagrams/`](A2/diagrams), [`A2/restaurant-api.postman_collection.json`](A2/restaurant-api.postman_collection.json) |
+| **A2** Backend (Express + MongoDB) | [`server/`](server) (config, models, routes, controllers, middleware) |
+| **A2** App ↔ server code | [`src/api/client.js`](src/api/client.js), [`src/hooks/useApi.js`](src/hooks/useApi.js) |
+| **A2** Screenshots / video | [`A2/screenshots/`](A2/screenshots) · video: **ADD LINK** |
+| A1 SRS and UML | [`A1/SRS.pdf`](A1/SRS.pdf), [`A1/UML/`](A1/UML) |
+| A1 screenshots and demo video | [`docs/screenshots/`](docs/screenshots), [`docs/demo-video.mp4`](docs/demo-video.mp4) |
+| Tests | [`__tests__/`](__tests__) (app), [`server/tests/`](server/tests) (server rules) |
 
 ---
 
-## 1. Installation and running
+## A2. Running the server and the app
+
+### Step 1: Start the server (laptop)
+
+Requirements: Node.js LTS, a MongoDB database (MongoDB Atlas free cluster, or MongoDB Community Server on the laptop).
+
+```bash
+cd server
+npm install
+copy .env.example .env      # Windows (Mac/Linux: cp .env.example .env)
+```
+
+Open `server/.env` and fill in the three values:
+
+```
+PORT=5000
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/restaurant_app?retryWrites=true&w=majority
+JWT_SECRET=any-long-random-text
+```
+
+(On Atlas, also add your IP under **Network Access**.) Then:
+
+```bash
+npm run seed    # fills the database with the A1 data (3 users, 16 menu items, 7 tables)
+npm run dev     # starts the server with nodemon on port 5000
+```
+
+You should see `MongoDB connected` and `Server running on http://localhost:5000`. Check it at http://localhost:5000/api/health, and on the phone's browser at `http://<laptop-ip>:5000/api/health` (find the IP with `ipconfig`). If Windows asks about the firewall, click **Allow**.
+
+### Step 2: Start the app (second terminal, project root)
+
+```bash
+npm install
+npx expo start
+```
+
+Scan the QR code with Expo Go (phone and laptop on the **same Wi-Fi**), or press `w` to open it in the browser.
+
+### Where to change BASE_URL
+
+`src/api/client.js` is the only place with the server address. By default it uses the laptop IP that Expo already knows (the address in the QR code), so usually nothing needs to change. If you get **"Cannot reach the server"**, type your laptop's IP in `MANUAL_BASE_URL`, e.g. `http://192.168.1.15:5000/api` (Android emulator: `http://10.0.2.2:5000/api`). If you start Expo with `--tunnel`, you must set `MANUAL_BASE_URL`.
+
+### Seeded login details
+
+| Role | Email | Password |
+|---|---|---|
+| Customer | `customer@dastarkhwan.pk` | `Customer123` |
+| Customer 2 | `sara@dastarkhwan.pk` | `Sara12345` |
+| Manager | `manager@dastarkhwan.pk` | `Manager123` |
+
+Promo codes: `WELCOME10`, `FEAST20`. Demo: tomorrow 20:00 is fully booked (slot shows "Full").
+
+### API endpoints
+
+| Method | Endpoint | Access | Request body | Response |
+|---|---|---|---|---|
+| GET | /api/health | Public | – | `{ status: "ok", time }` |
+| POST | /api/auth/register | Public | fullName, email, password, role | 201 token + user · 409 email exists |
+| POST | /api/auth/login | Public | email, password | token + user · 401 |
+| GET | /api/auth/me | Logged in | – | current user |
+| GET | /api/menu | Public | – (query `category`, `search`) | menu items |
+| GET | /api/menu/:id | Public | – | one item · 404 · 400 bad id |
+| POST | /api/menu | Manager | name, price, category, … | 201 item · 400 · 401 · 403 |
+| PUT | /api/menu/:id | Manager | fields to change | updated item |
+| DELETE | /api/menu/:id | Manager | – | `{ message }` |
+| GET | /api/tables | Public | – | tables |
+| POST | /api/orders | Customer | items [{id, quantity, note}], type, tableId / pickupTime, promoCode | 201 order (server-calculated total) |
+| GET | /api/orders/my | Customer | – | own orders |
+| GET | /api/orders | Manager | – | all orders |
+| PATCH | /api/orders/:id/status | Manager | status | updated order · 400 if not next step |
+| PATCH | /api/orders/:id/cancel | Customer | – | cancelled (only while Pending) |
+| POST | /api/reservations | Customer | tableId, date, time, partySize, name, phone | 201 · 409 table already booked |
+| GET | /api/reservations/availability?date= | Customer | – | booked {table, time} |
+| GET | /api/reservations/my | Customer | – | own bookings |
+| GET | /api/reservations | Manager | – | all bookings |
+| PATCH | /api/reservations/:id | Manager | status (Accepted / Declined) | updated booking |
+| PATCH | /api/reservations/:id/cancel | Customer | – | cancelled booking |
+
+Import [`A2/restaurant-api.postman_collection.json`](A2/restaurant-api.postman_collection.json) into Postman and click **Run**: it logs in first and saves the tokens, then tests every endpoint, including requests that should fail (401, 403, 400, 404, 409).
+
+### Common errors
+
+| Error | What to check |
+|---|---|
+| Cannot reach the server / Network request failed | Server running (`npm run dev`)? Same Wi-Fi? Firewall allows port 5000? Laptop IP changed? |
+| MongoServerSelectionError | Atlas → Network Access → add your IP; check user/password in `MONGO_URI`. |
+| MONGO_URI and JWT_SECRET must be set | You did not create `server/.env` from `.env.example`. |
+| 401 on every request | Log out and log in again (token expires after 1 day). |
+
+### A2 screenshots
+
+Put the A2 screenshots in `A2/screenshots/` (Postman health, phone browser health, menuitems collection, Postman pass/fail, 401/403/201, two devices with the same price).
+
+### A2 demo video
+
+▶️ **ADD LINK** (two-device test, up to 4 minutes)
+
+---
+
+# A1 (Assignment 1) documentation
+
+![A1 menu](docs/screenshots/02-menu.jpg)
+
+## 1. Installation and running (A1)
 
 **Requirements**
 

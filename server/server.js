@@ -1,10 +1,11 @@
 // Entry point of the backend. Run with: npm run dev
-require('dotenv').config(); // loads PORT and MONGO_URI from .env
+require('dotenv').config(); // loads PORT, MONGO_URI, JWT_SECRET from .env
 
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 
+const authRoutes = require('./routes/authRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const tableRoutes = require('./routes/tableRoutes');
 
@@ -19,6 +20,7 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', time: new Date().toISOString() });
 });
 
+app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/tables', tableRoutes);
 
@@ -38,8 +40,8 @@ app.use((err, req, res, next) => {
 });
 
 async function start() {
-  if (!process.env.MONGO_URI) {
-    console.error('MONGO_URI must be set in server/.env (see .env.example)');
+  if (!process.env.MONGO_URI || !process.env.JWT_SECRET) {
+    console.error('MONGO_URI and JWT_SECRET must be set in server/.env (see .env.example)');
     process.exit(1);
   }
   await connectDB();

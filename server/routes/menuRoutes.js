@@ -6,6 +6,7 @@ const {
   updateMenuItem,
   deleteMenuItem,
 } = require('../controllers/menuController');
+const { protect, managerOnly } = require('../middleware/auth');
 const validateId = require('../middleware/validateId');
 
 const router = express.Router();
@@ -14,8 +15,9 @@ const router = express.Router();
 router.get('/', getMenu);
 router.get('/:id', validateId, getMenuItem);
 
-router.post('/', createMenuItem);
-router.put('/:id', validateId, updateMenuItem);
-router.delete('/:id', validateId, deleteMenuItem);
+// Only a logged-in manager can change it.
+router.post('/', protect, managerOnly, createMenuItem);
+router.put('/:id', validateId, protect, managerOnly, updateMenuItem);
+router.delete('/:id', validateId, protect, managerOnly, deleteMenuItem);
 
 module.exports = router;
